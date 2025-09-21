@@ -1,7 +1,6 @@
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local PathfindingService = game:GetService("PathfindingService")
 
 local Knit = require(ReplicatedStorage.Shared.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
@@ -19,6 +18,7 @@ function EnemyService:KnitInit()
     self.Spawning = false
     self.MatchActive = false
     self.WaveCleared = Knit.Util.Signal.new()
+    self.EnemyCountChanged = Knit.Util.Signal.new()
 end
 
 function EnemyService:KnitStart()
@@ -40,6 +40,7 @@ function EnemyService:StartMatch()
     self.Enemies = {}
     self.TouchCooldowns = {}
     self.EnemyFolder:ClearAllChildren()
+    self.EnemyCountChanged:Fire(self.ActiveEnemies)
 end
 
 function EnemyService:StopAll()
@@ -51,6 +52,7 @@ function EnemyService:StopAll()
     self.Enemies = {}
     self.TouchCooldowns = {}
     self.ActiveEnemies = 0
+    self.EnemyCountChanged:Fire(self.ActiveEnemies)
 end
 
 function EnemyService:BeginWave(waveNumber: number)
@@ -141,9 +143,6 @@ function EnemyService:CreateEnemyModel(stats)
     humanoid.Health = stats.MaxHealth
     humanoid.Parent = model
 
-    local animator = Instance.new("Animator")
-    animator.Parent = humanoid
-
     model.PrimaryPart = root
     return model
 end
@@ -168,6 +167,7 @@ function EnemyService:SpawnEnemy(spawnCFrame: CFrame, stats)
     self.Enemies[model] = data
     self.ActiveEnemies = self.ActiveEnemies + 1
     self.TouchCooldowns[model] = {}
+    self.EnemyCountChanged:Fire(self.ActiveEnemies)
 
     if model.PrimaryPart then
         model.PrimaryPart:SetNetworkOwner(nil)
@@ -196,28 +196,55 @@ function EnemyService:RunEnemyBehavior(enemyData)
         return
     end
 
+    local refresh = math.max(0.05, Config.Enemy.PathRefresh)
+
     while self.MatchActive and humanoid.Health > 0 and model.Parent do
-        local target = self:GetClosestTarget(model)
-        if target then
-            local path = PathfindingService:CreatePath({
-                AgentRadius = 2,
-                AgentHeight = 5,
-                AgentCanJump = false,
-            })
-            local root = model.PrimaryPart
-            if root then
-                path:ComputeAsync(root.Position, target.Position)
-                local waypoints = path:GetWaypoints()
-                for _, waypoint in ipairs(waypoints) do
-                    if not self.MatchActive or humanoid.Health <= 0 or not model.Parent then
-                        break
-                    end
-                    humanoid:MoveTo(waypoint.Position)
-                    humanoid.MoveToFinished:Wait()
+        local targetRoot = self:GetClosestTarget(model)
+        local root = model.PrimaryPart
+
+        if targetRoot and targetRoot.Parent and root then
+            local reached = false
+            local connection
+            connection = humanoid.MoveToFinished:Connect(function()
+                reached = true
+            end)
+
+            humanoid:MoveTo(targetRoot.Position)
+
+            local elapsed = 0
+            while self.MatchActive and humanoid.Health > 0 and model.Parent and elapsed < refresh do
+                task.wait(0.05)
+                elapsed += 0.05
+
+                root = model.PrimaryPart
+                if not root then
+                    break
+                end
+
+                if reached then
+                    break
+                end
+
+                if not targetRoot.Parent then
+                    break
+                end
+
+                local distance = (targetRoot.Position - root.Position).Magnitude
+                if distance <= 3 then
+                    break
                 end
             end
+
+            if connection then
+                connection:Disconnect()
+            end
+        else
+            local rootPart = model.PrimaryPart
+            if rootPart then
+                humanoid:MoveTo(rootPart.Position)
+            end
+            task.wait(refresh)
         end
-        task.wait(Config.Enemy.PathRefresh)
     end
 end
 
@@ -267,7 +294,7 @@ function EnemyService:OnEnemyTouched(enemyData, part: BasePart)
     end
 
     local cooldowns = self.TouchCooldowns[enemyData.Model]
-    local now = os.clock()
+    local now = time()
     local last = cooldowns[player]
     if last and now - last < 1.5 then
         return
@@ -286,6 +313,7 @@ function EnemyService:OnEnemyDied(enemyData)
     self.Enemies[model] = nil
     self.TouchCooldowns[model] = nil
     self.ActiveEnemies = math.max(0, self.ActiveEnemies - 1)
+    self.EnemyCountChanged:Fire(self.ActiveEnemies)
 
     Net:FireAll("EnemyRemoved", model)
 
@@ -339,6 +367,7 @@ function EnemyService:ForceNextWave()
     self.Enemies = {}
     self.TouchCooldowns = {}
     self.ActiveEnemies = 0
+    self.EnemyCountChanged:Fire(self.ActiveEnemies)
     self.WaveCleared:Fire()
 end
 
