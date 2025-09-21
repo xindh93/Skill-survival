@@ -63,13 +63,17 @@ function MapService:EnsureArena()
         playerSpawnPart = Instance.new("SpawnLocation")
         playerSpawnPart.Name = "PlayerSpawn"
         playerSpawnPart.Size = Vector3.new(8, 1, 8)
-        playerSpawnPart.Anchored = true
-        playerSpawnPart.Transparency = 1
-        playerSpawnPart.CanCollide = true
-        playerSpawnPart.Neutral = true
-        playerSpawnPart.AllowTeamChangeOnTouch = true
         playerSpawnPart.Parent = Workspace
         createdSpawn = true
+    end
+
+    playerSpawnPart.Anchored = true
+    playerSpawnPart.CanCollide = false
+    playerSpawnPart.Transparency = 1
+
+    if playerSpawnPart:IsA("SpawnLocation") then
+        playerSpawnPart.Neutral = true
+        playerSpawnPart.AllowTeamChangeOnTouch = true
     end
 
     if createdSpawn then

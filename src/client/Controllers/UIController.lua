@@ -1,5 +1,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
 local Knit = require(ReplicatedStorage.Shared.Knit)
 local Net = require(ReplicatedStorage.Shared.Net)
 
@@ -47,6 +49,44 @@ function UIController:KnitStart()
     Net:GetEvent("Combat").OnClientEvent:Connect(function(event)
         if event.Type == "AOE" then
             self.HUD:ShowAOE(event.Position, event.Radius)
+        end
+    end)
+
+    RunService.RenderStepped:Connect(function()
+        if not self.HUD then
+            return
+        end
+
+        local now = Workspace:GetServerTimeNow()
+        local hasActive = false
+        local toClear = nil
+
+        for skillId, info in pairs(self.State.SkillCooldowns) do
+            local cooldown = info.Cooldown or 0
+            local timestamp = info.Timestamp
+
+            if not timestamp or cooldown <= 0 then
+                toClear = toClear or {}
+                table.insert(toClear, skillId)
+            else
+                local elapsed = now - timestamp
+                if elapsed >= cooldown then
+                    toClear = toClear or {}
+                    table.insert(toClear, skillId)
+                else
+                    hasActive = true
+                end
+            end
+        end
+
+        if toClear then
+            for _, skillId in ipairs(toClear) do
+                self.State.SkillCooldowns[skillId] = nil
+            end
+        end
+
+        if hasActive or toClear then
+            self.HUD:Update(self.State)
         end
     end)
 

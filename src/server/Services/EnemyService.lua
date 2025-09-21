@@ -70,14 +70,35 @@ function EnemyService:BeginWave(waveNumber: number)
     if #spawns == 0 then
         warn("[EnemyService] No spawn points available")
         self.Spawning = false
+        self.WaveCleared:Fire()
         return
     end
 
+    local spawnInterval = Config.Enemy.SpawnInterval or 0
+    if spawnInterval < 0 then
+        spawnInterval = 0
+    end
+
+    local maxActive = Config.Enemy.MaxActive
+    if type(maxActive) ~= "number" or maxActive <= 0 then
+        maxActive = math.huge
+    end
+
     task.spawn(function()
-        for index = 1, spawnCount do
+        local index = 1
+        while index <= spawnCount do
             if not self.MatchActive then
                 break
             end
+
+            while self.MatchActive and self.ActiveEnemies >= maxActive do
+                task.wait(math.max(0.1, spawnInterval * 0.25))
+            end
+
+            if not self.MatchActive then
+                break
+            end
+
             local spawnPart = spawns[((index - 1) % #spawns) + 1]
             local spawnCFrame = spawnPart.CFrame + Vector3.new(0, 3, 0)
             self:SpawnEnemy(spawnCFrame, {
@@ -86,7 +107,12 @@ function EnemyService:BeginWave(waveNumber: number)
                 Speed = Config.Enemy.BaseSpeed + speedBonus,
                 RewardGold = Config.Rewards.KillGold,
             })
-            task.wait(Config.Enemy.SpawnInterval)
+
+            index += 1
+
+            if index <= spawnCount then
+                task.wait(spawnInterval)
+            end
         end
 
         self.Spawning = false
@@ -357,6 +383,10 @@ end
 
 function EnemyService:GetRemainingEnemies(): number
     return self.ActiveEnemies
+end
+
+function EnemyService:IsSpawning(): boolean
+    return self.Spawning
 end
 
 function EnemyService:ForceNextWave()
