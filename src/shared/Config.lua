@@ -20,7 +20,8 @@ Config.Enemy = {
     MaxSpeedDelta = 8,
     BaseDamage = 10,
     DamageGrowth = 1.5,
-    SpawnInterval = 1.2,
+    SpawnInterval = 5,
+    MaxActive = 80,
     PathRefresh = 0.25,
 }
 
@@ -44,7 +45,7 @@ Config.Map = {
     FloorSize = Vector3.new(220, 2, 220),
     FloorMaterial = Enum.Material.Slate,
     LightingColor = Color3.fromRGB(70, 70, 70),
-    FloorTransparency = 0.35,
+    FloorTransparency = 1,
 }
 
 return Config

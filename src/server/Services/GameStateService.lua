@@ -153,6 +153,12 @@ function GameStateService:RunSession()
                 waveFinished = true
                 break
             end
+
+            if not self.EnemyService:IsSpawning() and self.EnemyService:GetRemainingEnemies() <= 0 then
+                waveFinished = true
+                break
+            end
+
             task.wait(0.5)
         end
 
