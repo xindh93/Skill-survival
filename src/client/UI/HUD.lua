@@ -35,11 +35,13 @@ function HUD.new(playerGui: PlayerGui)
     local waveLabel = createLabel(topFrame, "Wave 0", UDim2.new(0, 200, 1, 0), Enum.TextXAlignment.Left)
     waveLabel.Position = UDim2.new(0, 16, 0, 0)
 
-    local enemyLabel = createLabel(topFrame, "Enemies: 0", UDim2.new(0, 200, 1, 0), Enum.TextXAlignment.Left)
-    enemyLabel.Position = UDim2.new(0, 220, 0, 0)
+    local enemyLabel = createLabel(topFrame, "Enemies: 0", UDim2.new(0, 260, 1, 0), Enum.TextXAlignment.Center)
+    enemyLabel.AnchorPoint = Vector2.new(0.5, 0)
+    enemyLabel.Position = UDim2.new(0.5, 0, 0, 0)
 
-    local timerLabel = createLabel(topFrame, "Time: ∞", UDim2.new(0, 200, 1, 0), Enum.TextXAlignment.Left)
-    timerLabel.Position = UDim2.new(0, 420, 0, 0)
+    local timerLabel = createLabel(topFrame, "Time: ∞", UDim2.new(0, 220, 1, 0), Enum.TextXAlignment.Right)
+    timerLabel.AnchorPoint = Vector2.new(1, 0)
+    timerLabel.Position = UDim2.new(1, -16, 0, 0)
 
     local rightFrame = Instance.new("Frame")
     rightFrame.BackgroundTransparency = 1

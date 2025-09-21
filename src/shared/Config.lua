@@ -21,7 +21,7 @@ Config.Enemy = {
     BaseDamage = 10,
     DamageGrowth = 1.5,
     SpawnInterval = 1.2,
-    PathRefresh = 1.0,
+    PathRefresh = 0.25,
 }
 
 Config.Combat = {
@@ -44,6 +44,7 @@ Config.Map = {
     FloorSize = Vector3.new(220, 2, 220),
     FloorMaterial = Enum.Material.Slate,
     LightingColor = Color3.fromRGB(70, 70, 70),
+    FloorTransparency = 0.35,
 }
 
 return Config

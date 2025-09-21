@@ -1,11 +1,18 @@
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local ContextActionService = game:GetService("ContextActionService")
-local Workspace = game:GetService("Workspace")
+local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Knit = require(ReplicatedStorage.Shared.Knit)
 local Net = require(ReplicatedStorage.Shared.Net)
+
+local MOVE_KEY_DIRECTIONS = {
+    [Enum.KeyCode.W] = Vector3.new(0, 0, -1),
+    [Enum.KeyCode.S] = Vector3.new(0, 0, 1),
+    [Enum.KeyCode.A] = Vector3.new(-1, 0, 0),
+    [Enum.KeyCode.D] = Vector3.new(1, 0, 0),
+}
 
 local InputController = Knit.CreateController({
     Name = "InputController",
@@ -13,11 +20,31 @@ local InputController = Knit.CreateController({
 
 function InputController:KnitInit()
     self.MoveVector = Vector3.zero
+    self.ActiveMoveKeys = {}
+    self.LastMoveVector = Vector3.zero
     self.Mouse = Players.LocalPlayer:GetMouse()
 end
 
 function InputController:KnitStart()
     self:BindMovement()
+
+    RunService.RenderStepped:Connect(function()
+        local character = Players.LocalPlayer.Character
+        local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+        if not humanoid then
+            self.LastMoveVector = Vector3.zero
+            return
+        end
+
+        local moveVector = self.MoveVector
+        if moveVector.Magnitude > 0 then
+            humanoid:Move(moveVector, true)
+            self.LastMoveVector = moveVector
+        elseif self.LastMoveVector.Magnitude > 0 then
+            humanoid:Move(Vector3.zero, true)
+            self.LastMoveVector = Vector3.zero
+        end
+    end)
 
     UserInputService.InputBegan:Connect(function(input, gameProcessed)
         if gameProcessed then
@@ -33,47 +60,35 @@ function InputController:KnitStart()
 end
 
 function InputController:BindMovement()
-    local function handle(actionName, inputState, inputObject)
-        if inputState == Enum.UserInputState.End then
-            self.MoveVector = Vector3.zero
-            local character = Players.LocalPlayer.Character
-            local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-            if humanoid then
-                humanoid:Move(Vector3.zero, true)
-            end
-            return Enum.ContextActionResult.Pass
-        end
-
+    local function updateMoveVector()
         local move = Vector3.zero
-        if inputObject.KeyCode == Enum.KeyCode.W then
-            move = move + Vector3.new(0, 0, -1)
-        elseif inputObject.KeyCode == Enum.KeyCode.S then
-            move = move + Vector3.new(0, 0, 1)
-        elseif inputObject.KeyCode == Enum.KeyCode.A then
-            move = move + Vector3.new(-1, 0, 0)
-        elseif inputObject.KeyCode == Enum.KeyCode.D then
-            move = move + Vector3.new(1, 0, 0)
+        for _, direction in pairs(self.ActiveMoveKeys) do
+            move += direction
         end
 
         if move.Magnitude > 0 then
-            local character = Players.LocalPlayer.Character
-            local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-            if humanoid then
-                local camera = Workspace.CurrentCamera
-                local lookVector = camera.CFrame.LookVector
-                local rightVector = camera.CFrame.RightVector
-                local forward = Vector3.new(lookVector.X, 0, lookVector.Z)
-                if forward.Magnitude < 0.01 then
-                    forward = Vector3.new(0, 0, -1)
-                else
-                    forward = forward.Unit
-                end
-                local moveDirection = rightVector * move.X + forward * move.Z
-                if moveDirection.Magnitude > 0 then
-                    humanoid:Move(moveDirection.Unit, false)
-                end
+            if move.Magnitude > 1 then
+                move = move.Unit
             end
+            self.MoveVector = move
+        else
+            self.MoveVector = Vector3.zero
         end
+    end
+
+    local function handle(actionName, inputState, inputObject)
+        local direction = MOVE_KEY_DIRECTIONS[inputObject.KeyCode]
+        if not direction then
+            return Enum.ContextActionResult.Pass
+        end
+
+        if inputState == Enum.UserInputState.Begin then
+            self.ActiveMoveKeys[inputObject.KeyCode] = direction
+        elseif inputState == Enum.UserInputState.End or inputState == Enum.UserInputState.Cancel then
+            self.ActiveMoveKeys[inputObject.KeyCode] = nil
+        end
+
+        updateMoveVector()
 
         return Enum.ContextActionResult.Sink
     end

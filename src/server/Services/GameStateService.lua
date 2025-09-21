@@ -24,6 +24,14 @@ function GameStateService:KnitStart()
     self.RewardService = Knit.GetService("RewardService")
     self.MapService = Knit.GetService("MapService")
 
+    if self.EnemyService.EnemyCountChanged then
+        self.EnemyService.EnemyCountChanged:Connect(function()
+            if self.State == "Prepare" or self.State == "Active" then
+                Net:FireAll("HUD", self:GetHUDPayload())
+            end
+        end)
+    end
+
     Net:GetFunction("RestartMatch").OnServerInvoke = function(player)
         return self:RestartMatch(player)
     end
@@ -98,7 +106,7 @@ end
 function GameStateService:RunSession()
     self.State = "Prepare"
     self.CurrentWave = 0
-    self.MatchStartTime = os.clock()
+    self.MatchStartTime = time()
     self.ResultReason = "Unknown"
 
     self.RewardService:ResetAll()
@@ -116,7 +124,7 @@ function GameStateService:RunSession()
     end
 
     self.State = "Active"
-    self.MatchStartTime = os.clock()
+    self.MatchStartTime = time()
 
     task.spawn(function()
         while self.State == "Active" do
@@ -184,7 +192,7 @@ function GameStateService:GetTimeRemaining()
         return -1
     end
 
-    local elapsed = os.clock() - self.MatchStartTime
+    local elapsed = time() - self.MatchStartTime
     return math.max(0, Config.Session.TimeLimit - elapsed)
 end
 
@@ -197,7 +205,7 @@ function GameStateService:CheckForSessionEnd()
     end
 
     if not Config.Session.Infinite then
-        local elapsed = os.clock() - self.MatchStartTime
+        local elapsed = time() - self.MatchStartTime
         if elapsed >= Config.Session.TimeLimit then
             self.ResultReason = "Time limit"
             self.State = "Ended"
@@ -241,7 +249,7 @@ function GameStateService:FinalizeSession(reason: string)
     for _, player in ipairs(Players:GetPlayers()) do
         local summary = self.RewardService:GetSummary(player)
         summary.Wave = self.CurrentWave
-        summary.TimeSurvived = math.floor(os.clock() - self.MatchStartTime)
+        summary.TimeSurvived = math.floor(time() - self.MatchStartTime)
         Net:FireClient(player, "Result", summary)
     end
 end
