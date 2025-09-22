@@ -4,6 +4,7 @@ local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 local Knit = require(ReplicatedStorage.Shared.Knit)
 local Net = require(ReplicatedStorage.Shared.Net)
+local Config = require(ReplicatedStorage.Shared.Config)
 
 local HUD = require(script.Parent.Parent.UI.HUD)
 local ResultScreen = require(script.Parent.Parent.UI.ResultScreen)
@@ -21,6 +22,11 @@ function UIController:KnitInit()
         Gold = 0,
         XP = 0,
         SkillCooldowns = {},
+        DashCooldown = {
+            Remaining = 0,
+            Cooldown = (Config.Skill and Config.Skill.Dash and Config.Skill.Dash.Cooldown) or 6,
+            ReadyTime = 0,
+        },
     }
 end
 
@@ -52,6 +58,10 @@ function UIController:KnitStart()
         end
     end)
 
+    Net:GetEvent("DashCooldown").OnClientEvent:Connect(function(data)
+        self:OnDashCooldown(data)
+    end)
+
     RunService.RenderStepped:Connect(function()
         if not self.HUD then
             return
@@ -60,6 +70,20 @@ function UIController:KnitStart()
         local now = Workspace:GetServerTimeNow()
         local hasActive = false
         local toClear = nil
+        local needsUpdate = false
+
+        local dash = self.State.DashCooldown
+        if dash then
+            if dash.ReadyTime and dash.ReadyTime > 0 then
+                local newRemaining = math.max(0, dash.ReadyTime - now)
+                if dash.Remaining == nil or math.abs(newRemaining - dash.Remaining) > 0.01 then
+                    dash.Remaining = newRemaining
+                    needsUpdate = true
+                else
+                    dash.Remaining = newRemaining
+                end
+            end
+        end
 
         for skillId, info in pairs(self.State.SkillCooldowns) do
             local cooldown = info.Cooldown or 0
@@ -85,7 +109,7 @@ function UIController:KnitStart()
             end
         end
 
-        if hasActive or toClear then
+        if needsUpdate or hasActive or toClear then
             self.HUD:Update(self.State)
         end
     end)
@@ -99,6 +123,8 @@ function UIController:ApplyHUDUpdate(payload)
             for skillId, info in pairs(value) do
                 self.State.SkillCooldowns[skillId] = info
             end
+        elseif key == "DashCooldown" then
+            self:OnDashCooldown(value)
         else
             self.State[key] = value
         end
@@ -106,5 +132,37 @@ function UIController:ApplyHUDUpdate(payload)
 
     self.HUD:Update(self.State)
 end
+
+/* PATCH START: Dash cooldown syncing */
+function UIController:OnDashCooldown(data)
+    local dashState = self.State.DashCooldown
+    if not dashState then
+        dashState = {}
+        self.State.DashCooldown = dashState
+    end
+
+    local now = Workspace:GetServerTimeNow()
+    local cooldown = dashState.Cooldown or 0
+    local remaining = dashState.Remaining or 0
+
+    if typeof(data) == "table" then
+        if typeof(data.Cooldown) == "number" then
+            cooldown = math.max(0, data.Cooldown)
+        end
+        if typeof(data.Remaining) == "number" then
+            remaining = math.max(0, data.Remaining)
+        end
+    end
+
+    dashState.Cooldown = cooldown
+    dashState.Remaining = remaining
+    dashState.ReadyTime = now + remaining
+    dashState.LastUpdate = now
+
+    if self.HUD then
+        self.HUD:Update(self.State)
+    end
+end
+/* PATCH END */
 
 return UIController

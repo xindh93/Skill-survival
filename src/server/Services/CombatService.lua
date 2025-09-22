@@ -201,4 +201,25 @@ function CombatService:ExecuteAOEBlast(player: Player, root: BasePart, levelInfo
     })
 end
 
+/* PATCH START: Apply damage with dash i-frame check */
+function CombatService:ApplyDamageToPlayer(player: Player, amount: number, _source)
+    if amount <= 0 then
+        return false
+    end
+
+    local character = player.Character
+    if not character or character:GetAttribute("IFrame") then
+        return false
+    end
+
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if not humanoid or humanoid.Health <= 0 then
+        return false
+    end
+
+    humanoid:TakeDamage(amount)
+    return true
+end
+/* PATCH END */
+
 return CombatService
