@@ -133,7 +133,6 @@ function UIController:ApplyHUDUpdate(payload)
     self.HUD:Update(self.State)
 end
 
-/* PATCH START: Dash cooldown syncing */
 function UIController:OnDashCooldown(data)
     local dashState = self.State.DashCooldown
     if not dashState then
@@ -163,6 +162,5 @@ function UIController:OnDashCooldown(data)
         self.HUD:Update(self.State)
     end
 end
-/* PATCH END */
 
 return UIController

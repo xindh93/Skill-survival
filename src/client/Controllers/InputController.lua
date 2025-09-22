@@ -114,7 +114,6 @@ function InputController:ActivateSkill(skillId: string)
     })
 end
 
-/* PATCH START: Dash input helper */
 function InputController:GetDashDirection(): Vector3?
     local player = Players.LocalPlayer
     local character = player and player.Character
@@ -161,6 +160,5 @@ function InputController:RequestDash()
     local event = Net:GetEvent("DashRequest")
     event:FireServer(direction)
 end
-/* PATCH END */
 
 return InputController

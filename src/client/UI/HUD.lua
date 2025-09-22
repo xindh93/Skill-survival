@@ -245,7 +245,6 @@ function HUD:ShowAOE(position: Vector3, radius: number)
     end)
 end
 
-/* PATCH START: Dash gauge updates */
 function HUD:UpdateDashCooldown(dashData)
     if not self.DashFill or not self.DashCooldownLabel then
         return
@@ -279,6 +278,5 @@ function HUD:UpdateDashCooldown(dashData)
         self.DashCooldownLabel.TextColor3 = Color3.new(1, 1, 1)
     end
 end
-/* PATCH END */
 
 return HUD
