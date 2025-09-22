@@ -55,6 +55,8 @@ function InputController:KnitStart()
             self:PerformBasicAttack()
         elseif input.KeyCode == Enum.KeyCode.Q then
             self:ActivateSkill("AOE_Blast")
+        elseif input.KeyCode == Enum.KeyCode.E then
+            self:RequestDash()
         end
     end)
 end
@@ -110,6 +112,53 @@ function InputController:ActivateSkill(skillId: string)
     event:FireServer(skillId, {
         TargetPosition = targetPosition,
     })
+end
+
+function InputController:GetDashDirection(): Vector3?
+    local player = Players.LocalPlayer
+    local character = player and player.Character
+    if not character then
+        return nil
+    end
+
+    local root = character:FindFirstChild("HumanoidRootPart")
+    if not root then
+        return nil
+    end
+
+    local moveVector = self.MoveVector
+    if moveVector and moveVector.Magnitude > 0.05 then
+        local flat = Vector3.new(moveVector.X, 0, moveVector.Z)
+        if flat.Magnitude > 0.05 then
+            return flat.Unit
+        end
+    end
+
+    if self.Mouse and self.Mouse.Hit then
+        local delta = self.Mouse.Hit.Position - root.Position
+        local flatDelta = Vector3.new(delta.X, 0, delta.Z)
+        if flatDelta.Magnitude > 0.1 then
+            return flatDelta.Unit
+        end
+    end
+
+    local look = root.CFrame.LookVector
+    local flatLook = Vector3.new(look.X, 0, look.Z)
+    if flatLook.Magnitude > 0.001 then
+        return flatLook.Unit
+    end
+
+    return nil
+end
+
+function InputController:RequestDash()
+    local direction = self:GetDashDirection()
+    if not direction then
+        return
+    end
+
+    local event = Net:GetEvent("DashRequest")
+    event:FireServer(direction)
 end
 
 return InputController

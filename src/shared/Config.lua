@@ -48,4 +48,31 @@ Config.Map = {
     FloorTransparency = 1,
 }
 
+Config.Skill = Config.Skill or {}
+
+Config.Skill.Dash = Config.Skill.Dash or {
+    Cooldown = 6.0,
+    Distance = 12.0,
+    Duration = 0.18,
+    IFrame = 0.2,
+}
+
+Config.Stage = Config.Stage or {}
+
+Config.Stage.Timings = Config.Stage.Timings or {
+    BossSpawnAtSeconds = 480,
+    EnrageAtSeconds = 600,
+    UseRelativeEnrage = true,
+    EnrageAfterBossSeconds = 120,
+}
+
+do
+    local TESTING = false
+    if TESTING then
+        Config.Stage.Timings.BossSpawnAtSeconds = 60
+        Config.Stage.Timings.UseRelativeEnrage = true
+        Config.Stage.Timings.EnrageAfterBossSeconds = 30
+    end
+end
+
 return Config
