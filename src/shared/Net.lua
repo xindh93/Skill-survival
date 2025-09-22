@@ -30,6 +30,9 @@ Net.Definitions = {
         EnemySpawned = "EnemySpawned",
         EnemyRemoved = "EnemyRemoved",
         LobbyTeleport = "LobbyTeleport",
+        DashRequest = "DashRequest",
+        DashReplicate = "DashReplicate",
+        DashCooldown = "DashCooldown",
     },
     Functions = {
         RequestSummary = "RequestSummary",

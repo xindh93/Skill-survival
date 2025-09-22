@@ -24,6 +24,7 @@ end
 function EnemyService:KnitStart()
     self.RewardService = Knit.GetService("RewardService")
     self.MapService = Knit.GetService("MapService")
+    self.CombatService = Knit.GetService("CombatService")
 
     self.EnemyFolder = Workspace:FindFirstChild("Enemies")
     if not self.EnemyFolder then
@@ -327,7 +328,11 @@ function EnemyService:OnEnemyTouched(enemyData, part: BasePart)
     end
 
     cooldowns[player] = now
-    humanoid:TakeDamage(enemyData.Stats.Damage)
+    if self.CombatService then
+        self.CombatService:ApplyDamageToPlayer(player, enemyData.Stats.Damage, enemyData)
+    else
+        humanoid:TakeDamage(enemyData.Stats.Damage)
+    end
 end
 
 function EnemyService:OnEnemyDied(enemyData)
