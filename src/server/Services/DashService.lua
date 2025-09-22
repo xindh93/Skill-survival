@@ -40,7 +40,7 @@ function DashService:KnitInit()
     self.ActiveDashes = {} :: {[Player]: DashState}
     self.CooldownThreads = {} :: {[Player]: thread}
     self.IFrameTokens = {} :: {[Model]: {}?}
-    self.EnemyService = nil
+
 end
 
 local function getDashConfig()
@@ -68,6 +68,7 @@ function DashService:KnitStart()
     Players.PlayerRemoving:Connect(function(player)
         self:CleanupPlayer(player)
     end)
+
 
     self.EnemyService = Knit.GetService("EnemyService")
 
@@ -153,6 +154,7 @@ function DashService:HandleDashRequest(player: Player, rawDirection)
         return
     end
 
+
     direction = Vector3.new(direction.X, 0, direction.Z)
     if direction.Magnitude <= 0.001 then
         return
@@ -163,6 +165,7 @@ function DashService:HandleDashRequest(player: Player, rawDirection)
     local params = RaycastParams.new()
     params.FilterType = Enum.RaycastFilterType.Exclude
     params.IgnoreWater = true
+
 
     local ignore = {character}
     local enemyService = self.EnemyService
@@ -175,6 +178,9 @@ function DashService:HandleDashRequest(player: Player, rawDirection)
         end
     end
     params.FilterDescendantsInstances = ignore
+
+    params.FilterDescendantsInstances = {character}
+
 
     local raycast = Workspace:Raycast(root.Position, direction * dashDistance, params)
     if raycast then
@@ -189,6 +195,9 @@ function DashService:HandleDashRequest(player: Player, rawDirection)
     local startPos = root.Position
     local targetPos = startPos + direction * dashDistance
     targetPos = Vector3.new(targetPos.X, startPos.Y, targetPos.Z)
+
+    targetPos = self:SnapToGround(character, root, targetPos)
+
 
     local startTime = os.clock()
     local duration = math.max(0.05, dashConfig.Duration)
@@ -245,6 +254,22 @@ function DashService:ResolveDirection(rawDirection, humanoid: Humanoid, root: Ba
     return nil
 end
 
+
+function DashService:SnapToGround(character: Model, root: BasePart, targetPos: Vector3): Vector3
+    local params = RaycastParams.new()
+    params.FilterType = Enum.RaycastFilterType.Exclude
+    params.IgnoreWater = true
+    params.FilterDescendantsInstances = {character}
+
+    local halfHeight = root.Size.Y * 0.5
+    local origin = targetPos + Vector3.new(0, halfHeight + 6, 0)
+    local result = Workspace:Raycast(origin, Vector3.new(0, -(halfHeight + 12), 0), params)
+    if result then
+        return Vector3.new(targetPos.X, result.Position.Y + halfHeight, targetPos.Z)
+    end
+
+    return Vector3.new(targetPos.X, root.Position.Y, targetPos.Z)
+end
 
 function DashService:ScheduleIFrameClear(character: Model, duration: number)
     if duration <= 0 then
