@@ -201,7 +201,7 @@ function CombatService:ExecuteAOEBlast(player: Player, root: BasePart, levelInfo
     })
 end
 
-/* PATCH START: Apply damage with dash i-frame check */
+-- PATCH START: Apply damage with dash i-frame check
 function CombatService:ApplyDamageToPlayer(player: Player, amount: number, _source)
     if amount <= 0 then
         return false
@@ -220,6 +220,6 @@ function CombatService:ApplyDamageToPlayer(player: Player, amount: number, _sour
     humanoid:TakeDamage(amount)
     return true
 end
-/* PATCH END */
+-- PATCH END
 
 return CombatService
