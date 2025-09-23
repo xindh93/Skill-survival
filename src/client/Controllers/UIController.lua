@@ -2,6 +2,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
+
 local Knit = require(ReplicatedStorage.Shared.Knit)
 local Net = require(ReplicatedStorage.Shared.Net)
 local Config = require(ReplicatedStorage.Shared.Config)
@@ -33,11 +34,17 @@ function UIController:KnitInit()
 end
 
 function UIController:KnitStart()
-    local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
+    local player = Players.LocalPlayer
+    if not player then
+        return
+    end
+
+    local playerGui = player:WaitForChild("PlayerGui")
     self.HUD = Knit.GetController("HUDController")
     if self.HUD and self.HUD.CreateInterface and not self.HUD.Screen then
         self.HUD:CreateInterface(playerGui)
     end
+
     self.ResultScreen = ResultScreen.new(playerGui)
 
     Net:GetEvent("HUD").OnClientEvent:Connect(function(payload)
@@ -45,21 +52,30 @@ function UIController:KnitStart()
     end)
 
     Net:GetEvent("GameState").OnClientEvent:Connect(function(data)
+        local hud = self.HUD
         if data.Type == "WaveStart" then
-            self.HUD:PlayWaveAnnouncement(data.Wave)
+            if hud and hud.PlayWaveAnnouncement then
+                hud:PlayWaveAnnouncement(data.Wave)
+            end
         elseif data.Type == "TeleportFailed" then
-            self.HUD:ShowMessage("Teleport failed: " .. tostring(data.Message))
+            if hud and hud.ShowMessage then
+                hud:ShowMessage("Teleport failed: " .. tostring(data.Message))
+            end
         end
     end)
 
     Net:GetEvent("Result").OnClientEvent:Connect(function(summary)
-        self.HUD:ShowMessage("Session ended: " .. tostring(summary.Reason))
+        local hud = self.HUD
+        if hud and hud.ShowMessage then
+            hud:ShowMessage("Session ended: " .. tostring(summary.Reason))
+        end
         self.ResultScreen:Show(summary)
     end)
 
     Net:GetEvent("Combat").OnClientEvent:Connect(function(event)
-        if event.Type == "AOE" then
-            self.HUD:ShowAOE(event.Position, event.Radius)
+        local hud = self.HUD
+        if hud and hud.ShowAOE and event.Type == "AOE" then
+            hud:ShowAOE(event.Position, event.Radius)
         end
     end)
 
@@ -72,7 +88,8 @@ function UIController:KnitStart()
     end)
 
     RunService.RenderStepped:Connect(function()
-        if not self.HUD then
+        local hud = self.HUD
+        if not hud or not hud.Update then
             return
         end
 
@@ -82,15 +99,13 @@ function UIController:KnitStart()
         local needsUpdate = false
 
         local dash = self.State.DashCooldown
-        if dash then
-            if dash.ReadyTime and dash.ReadyTime > 0 then
-                local newRemaining = math.max(0, dash.ReadyTime - now)
-                if dash.Remaining == nil or math.abs(newRemaining - dash.Remaining) > 0.01 then
-                    dash.Remaining = newRemaining
-                    needsUpdate = true
-                else
-                    dash.Remaining = newRemaining
-                end
+        if dash and dash.ReadyTime and dash.ReadyTime > 0 then
+            local newRemaining = math.max(0, dash.ReadyTime - now)
+            if dash.Remaining == nil or math.abs(newRemaining - dash.Remaining) > 0.01 then
+                dash.Remaining = newRemaining
+                needsUpdate = true
+            else
+                dash.Remaining = newRemaining
             end
         end
 
@@ -119,11 +134,13 @@ function UIController:KnitStart()
         end
 
         if needsUpdate or hasActive or toClear then
-            self.HUD:Update(self.State)
+            hud:Update(self.State)
         end
     end)
 
-    self.HUD:Update(self.State)
+    if self.HUD and self.HUD.Update then
+        self.HUD:Update(self.State)
+    end
 end
 
 function UIController:ApplyHUDUpdate(payload)
@@ -145,7 +162,9 @@ function UIController:ApplyHUDUpdate(payload)
         end
     end
 
-    self.HUD:Update(self.State)
+    if self.HUD and self.HUD.Update then
+        self.HUD:Update(self.State)
+    end
 end
 
 function UIController:OnDashCooldown(data)
@@ -173,7 +192,7 @@ function UIController:OnDashCooldown(data)
     dashState.ReadyTime = now + remaining
     dashState.LastUpdate = now
 
-    if self.HUD then
+    if self.HUD and self.HUD.Update then
         self.HUD:Update(self.State)
     end
 end
@@ -185,7 +204,7 @@ function UIController:OnPartyUpdate(partyData)
         self.State.Party = partyData
     end
 
-    if self.HUD then
+    if self.HUD and self.HUD.Update then
         self.HUD:Update(self.State)
     end
 end

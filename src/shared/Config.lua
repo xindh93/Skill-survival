@@ -89,74 +89,87 @@ do
     end
 end
 
-Config.UI = {
-    SafeMargin = 24,
-    Font = Enum.Font.Gotham,
-    BoldFont = Enum.Font.GothamBold,
-    TopBarHeight = 52,
-    TopBarBackgroundColor = Color3.fromRGB(18, 24, 32),
-    TopBarTransparency = 0.32,
-    TopLabelTextSize = 20,
-    InfoTextSize = 18,
-    SmallTextSize = 16,
-    TopInfoWidth = 240,
-    SectionSpacing = 14,
-    AlertAreaOffset = 14,
-    AlertAreaWidth = 440,
-    AlertAreaHeight = 140,
-    AlertTextSize = 20,
-    ReservedAlertHeight = 56,
-    AlertBackgroundColor = Color3.fromRGB(18, 24, 32),
-    AlertBackgroundTransparency = 0.35,
-    MessageDuration = 3,
-    BottomReservedHeight = 160,
-    XP = {
-        BarWidth = 380,
-        BarHeight = 18,
-        LevelWidth = 60,
-        LevelSpacing = 12,
-        LabelHeight = 20,
-        LabelTextSize = 18,
-        LevelTextSize = 24,
-        BackgroundColor = Color3.fromRGB(18, 24, 32),
-        BackgroundTransparency = 0.45,
-        FillColor = Color3.fromRGB(88, 182, 255),
-        FillTransparency = 0.05,
-        CornerRadius = 10,
-    },
-    Dash = {
-        Size = 72,
-        BackgroundColor = Color3.fromRGB(18, 24, 32),
-        BackgroundTransparency = 0.25,
-        FillColor = Color3.fromRGB(120, 200, 255),
-        FillTransparency = 0.15,
-        StrokeColor = Color3.fromRGB(120, 200, 255),
-        StrokeThickness = 2,
-        StrokeTransparency = 0.2,
-    },
-    Party = {
-        Width = 240,
-        Padding = 8,
-        EntryHeight = 42,
-        BackgroundColor = Color3.fromRGB(18, 24, 32),
-        BackgroundTransparency = 0.25,
-        CornerRadius = 10,
-        StrokeColor = Color3.fromRGB(80, 120, 160),
-        StrokeThickness = 1.5,
-        StrokeTransparency = 0.35,
-        HealthFillColor = Color3.fromRGB(88, 255, 120),
-        HealthFillTransparency = 0.25,
-        NameTextSize = 16,
-        HealthTextSize = 15,
-        EmptyText = "No party members",
-    },
-    Abilities = {
-        Width = 260,
-        Height = 90,
-        SkillWidth = 150,
-        SkillHeight = 36,
-        Spacing = 12,
-    },
-}
+Config.UI = Config.UI or {}
+
+local ui = Config.UI
+ui.SafeMargin = ui.SafeMargin or 24
+ui.Font = ui.Font or Enum.Font.Gotham
+ui.BoldFont = ui.BoldFont or Enum.Font.GothamBold
+ui.TopBarHeight = ui.TopBarHeight or 52
+ui.TopBarBackgroundColor = ui.TopBarBackgroundColor or Color3.fromRGB(18, 24, 32)
+ui.TopBarTransparency = ui.TopBarTransparency or 0.32
+ui.TopLabelTextSize = ui.TopLabelTextSize or 20
+ui.InfoTextSize = ui.InfoTextSize or 18
+ui.SmallTextSize = ui.SmallTextSize or 16
+ui.TopInfoWidth = ui.TopInfoWidth or 240
+ui.ResourceHeight = ui.ResourceHeight or 60
+ui.ResourcePadding = ui.ResourcePadding or 6
+ui.SectionSpacing = ui.SectionSpacing or 14
+ui.AlertAreaOffset = ui.AlertAreaOffset or 14
+ui.AlertAreaWidth = ui.AlertAreaWidth or 440
+ui.AlertAreaHeight = ui.AlertAreaHeight or 140
+ui.AlertPadding = ui.AlertPadding or 8
+ui.AlertTextSize = ui.AlertTextSize or 20
+ui.ReservedAlertHeight = ui.ReservedAlertHeight or 56
+ui.ReservedAlertCornerRadius = ui.ReservedAlertCornerRadius or 10
+ui.AlertBackgroundColor = ui.AlertBackgroundColor or Color3.fromRGB(18, 24, 32)
+ui.AlertBackgroundTransparency = ui.AlertBackgroundTransparency or 0.35
+ui.MessageHeight = ui.MessageHeight or 40
+ui.WaveAnnouncementHeight = ui.WaveAnnouncementHeight or 48
+ui.MessageDuration = ui.MessageDuration or 3
+ui.DisplayOrder = ui.DisplayOrder or { HUD = 0 }
+
+ui.XP = ui.XP or {}
+local xp = ui.XP
+xp.BarWidth = xp.BarWidth or 380
+xp.BarHeight = xp.BarHeight or 18
+xp.LevelWidth = xp.LevelWidth or 60
+xp.LevelSpacing = xp.LevelSpacing or 12
+xp.LabelHeight = xp.LabelHeight or 20
+xp.LabelTextSize = xp.LabelTextSize or 18
+xp.LevelTextSize = xp.LevelTextSize or 24
+xp.BackgroundColor = xp.BackgroundColor or Color3.fromRGB(18, 24, 32)
+xp.BackgroundTransparency = xp.BackgroundTransparency or 0.45
+xp.FillColor = xp.FillColor or Color3.fromRGB(88, 182, 255)
+xp.FillTransparency = xp.FillTransparency or 0.05
+xp.CornerRadius = xp.CornerRadius or 10
+
+ui.Dash = ui.Dash or {}
+local dash = ui.Dash
+dash.Size = dash.Size or 72
+dash.BackgroundColor = dash.BackgroundColor or Color3.fromRGB(18, 24, 32)
+dash.BackgroundTransparency = dash.BackgroundTransparency or 0.25
+dash.FillColor = dash.FillColor or Color3.fromRGB(120, 200, 255)
+dash.FillTransparency = dash.FillTransparency or 0.15
+dash.StrokeColor = dash.StrokeColor or Color3.fromRGB(120, 200, 255)
+dash.StrokeThickness = dash.StrokeThickness or 2
+dash.StrokeTransparency = dash.StrokeTransparency or 0.2
+dash.ReadyColor = dash.ReadyColor or Color3.fromRGB(180, 255, 205)
+
+ui.Party = ui.Party or {}
+local party = ui.Party
+party.Width = party.Width or 240
+party.Padding = party.Padding or 8
+party.EntryHeight = party.EntryHeight or 42
+party.BackgroundColor = party.BackgroundColor or Color3.fromRGB(18, 24, 32)
+party.BackgroundTransparency = party.BackgroundTransparency or 0.25
+party.LocalPlayerTransparency = party.LocalPlayerTransparency or 0.18
+party.CornerRadius = party.CornerRadius or 10
+party.StrokeColor = party.StrokeColor or Color3.fromRGB(80, 120, 160)
+party.StrokeThickness = party.StrokeThickness or 1.5
+party.StrokeTransparency = party.StrokeTransparency or 0.35
+party.HealthFillColor = party.HealthFillColor or Color3.fromRGB(88, 255, 120)
+party.HealthFillTransparency = party.HealthFillTransparency or 0.25
+party.NameTextSize = party.NameTextSize or 16
+party.HealthTextSize = party.HealthTextSize or 15
+party.EmptyText = party.EmptyText or "No party members"
+
+ui.Abilities = ui.Abilities or {}
+local abilities = ui.Abilities
+abilities.Width = abilities.Width or 260
+abilities.Height = abilities.Height or 90
+abilities.SkillWidth = abilities.SkillWidth or 150
+abilities.SkillHeight = abilities.SkillHeight or 36
+abilities.Spacing = abilities.Spacing or 12
 
 return Config
