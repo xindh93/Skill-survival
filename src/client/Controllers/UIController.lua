@@ -146,15 +146,29 @@ end
 function UIController:ApplyHUDUpdate(payload)
     for key, value in pairs(payload) do
         if key == "SkillCooldowns" then
-            for skillId, info in pairs(value) do
-                self.State.SkillCooldowns[skillId] = info
+            if typeof(value) == "table" then
+                for skillId, info in pairs(value) do
+                    if typeof(info) == "table" then
+                        self.State.SkillCooldowns[skillId] = table.clone(info)
+                    else
+                        self.State.SkillCooldowns[skillId] = info
+                    end
+                end
             end
         elseif key == "DashCooldown" then
             self:OnDashCooldown(value)
         elseif key == "Party" then
-            self.State.Party = value
+            if typeof(value) == "table" then
+                self.State.Party = table.clone(value)
+            else
+                self.State.Party = value
+            end
         elseif key == "XPProgress" then
-            self.State.XPProgress = value
+            if typeof(value) == "table" then
+                self.State.XPProgress = table.clone(value)
+            else
+                self.State.XPProgress = value
+            end
         elseif key == "Level" then
             self.State.Level = value
         else
@@ -201,7 +215,7 @@ function UIController:OnPartyUpdate(partyData)
     if typeof(partyData) ~= "table" then
         self.State.Party = {}
     else
-        self.State.Party = partyData
+        self.State.Party = table.clone(partyData)
     end
 
     if self.HUD and self.HUD.Update then

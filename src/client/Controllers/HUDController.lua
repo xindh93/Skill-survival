@@ -131,13 +131,12 @@ function HUDController:CreateInterface(playerGui: PlayerGui)
 
     -- Resource stack on the top-left
     local resourceWidth = uiConfig.TopInfoWidth or 240
-    local resourceHeight = uiConfig.ResourceHeight or 60
     local resourceSpacing = uiConfig.ResourcePadding or 6
 
     local resourceFrame = Instance.new("Frame")
     resourceFrame.Name = "Resources"
     resourceFrame.BackgroundTransparency = 1
-    resourceFrame.Size = UDim2.new(0, resourceWidth, 0, resourceHeight)
+    resourceFrame.Size = UDim2.new(0, resourceWidth, 0, 0)
     resourceFrame.Position = UDim2.new(0, 0, 0, topBarHeight + (uiConfig.SectionSpacing or 12))
     resourceFrame.Parent = safeFrame
     trySetAutomaticSize(resourceFrame, Enum.AutomaticSize.Y)
@@ -210,7 +209,7 @@ function HUDController:CreateInterface(playerGui: PlayerGui)
     partyContainer.Name = "PartyContainer"
     partyContainer.BackgroundTransparency = 1
     partyContainer.AnchorPoint = Vector2.new(1, 0.5)
-    partyContainer.Size = UDim2.new(0, partyConfig.Width or 240, 0, 10)
+    partyContainer.Size = UDim2.new(0, partyConfig.Width or 240, 0, 0)
     partyContainer.Position = UDim2.new(1, 0, 0.5, 0)
     partyContainer.Parent = safeFrame
     trySetAutomaticSize(partyContainer, Enum.AutomaticSize.Y)
@@ -231,31 +230,51 @@ function HUDController:CreateInterface(playerGui: PlayerGui)
     -- Ability area (bottom-left)
     local abilityConfig = uiConfig.Abilities or {}
     local dashConfig = uiConfig.Dash or {}
-
+    local dashSize = dashConfig.Size or 72
     local abilityWidth = abilityConfig.Width or 260
-    local abilityHeight = abilityConfig.Height or 90
-    local abilitySkillWidth = abilityConfig.SkillWidth or 150
-    local abilitySkillHeight = abilityConfig.SkillHeight or 40
+    local abilityHeight = math.max(abilityConfig.Height or dashSize, dashSize)
     local abilitySpacing = abilityConfig.Spacing or 12
+    local abilityBottomOffset = abilityConfig.BottomOffset or 0
+    local skillKeyText = abilityConfig.SkillKey or "Q"
+
+    self.PrimarySkillId = abilityConfig.PrimarySkillId or "AOE_Blast"
+    self.SkillKeyText = skillKeyText
+    self.DashReadyText = dashConfig.ReadyText or "Ready"
+    self.DashReadyColor = dashConfig.ReadyColor or Color3.fromRGB(180, 255, 205)
 
     local abilityFrame = Instance.new("Frame")
     abilityFrame.Name = "AbilityFrame"
     abilityFrame.BackgroundTransparency = 1
     abilityFrame.AnchorPoint = Vector2.new(0, 1)
     abilityFrame.Size = UDim2.new(0, abilityWidth, 0, abilityHeight)
-    abilityFrame.Position = UDim2.new(0, 0, 1, 0)
+    abilityFrame.Position = UDim2.new(0, 0, 1, -abilityBottomOffset)
     abilityFrame.Parent = safeFrame
 
-    local skillLabel = createTextLabel(abilityFrame, "Q: Ready", boldFont, infoTextSize, Enum.TextXAlignment.Left)
-    skillLabel.Size = UDim2.new(0, abilitySkillWidth, 0, abilitySkillHeight)
-    skillLabel.Position = UDim2.new(0, 0, 0, math.max(0, math.floor((abilityHeight - abilitySkillHeight) / 2)))
-    skillLabel.TextScaled = true
+    local abilityLayout = Instance.new("UIListLayout")
+    abilityLayout.FillDirection = Enum.FillDirection.Horizontal
+    abilityLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
+    abilityLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+    abilityLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    abilityLayout.Padding = UDim.new(0, abilitySpacing)
+    abilityLayout.Parent = abilityFrame
+
+    local skillLabel = createTextLabel(
+        abilityFrame,
+        string.format("%s: Ready", skillKeyText),
+        boldFont,
+        abilityConfig.SkillTextSize or infoTextSize,
+        Enum.TextXAlignment.Left
+    )
+    skillLabel.LayoutOrder = 1
+    skillLabel.Size = UDim2.new(0, abilityConfig.SkillWidth or 150, 1, 0)
+    skillLabel.TextScaled = false
+    skillLabel.TextTruncate = Enum.TextTruncate.AtEnd
 
     local dashContainer = Instance.new("Frame")
     dashContainer.Name = "DashContainer"
     dashContainer.BackgroundTransparency = 1
-    dashContainer.Size = UDim2.new(0, dashConfig.Size or 72, 0, dashConfig.Size or 72)
-    dashContainer.Position = UDim2.new(0, abilitySkillWidth + abilitySpacing, 0, math.max(0, math.floor((abilityHeight - (dashConfig.Size or 72)) / 2)))
+    dashContainer.LayoutOrder = 2
+    dashContainer.Size = UDim2.new(0, dashSize, 0, dashSize)
     dashContainer.Parent = abilityFrame
 
     local dashGauge = Instance.new("Frame")
@@ -295,22 +314,29 @@ function HUDController:CreateInterface(playerGui: PlayerGui)
     dashFill.BackgroundTransparency = dashConfig.FillTransparency or 0.15
     dashFill.BorderSizePixel = 0
     dashFill.Position = UDim2.new(0, 0, 1, 0)
-    dashFill.Size = UDim2.new(1, 0, 0, 0)
+    dashFill.Size = UDim2.new(1, 0, 1, 0)
     dashFill.Parent = dashMask
 
     local dashFillCorner = Instance.new("UICorner")
     dashFillCorner.CornerRadius = UDim.new(1, 0)
     dashFillCorner.Parent = dashFill
 
-    local dashKeyLabel = createTextLabel(dashGauge, "E", boldFont, smallTextSize, Enum.TextXAlignment.Center)
+    local dashKeyLabel = createTextLabel(dashGauge, dashConfig.KeyText or "E", boldFont, smallTextSize, Enum.TextXAlignment.Center)
     dashKeyLabel.AnchorPoint = Vector2.new(0.5, 0.5)
     dashKeyLabel.Position = UDim2.new(0.5, 0, 0.32, 0)
     dashKeyLabel.TextScaled = true
 
-    local dashCooldownLabel = createTextLabel(dashGauge, "Ready", boldFont, smallTextSize, Enum.TextXAlignment.Center)
+    local dashCooldownLabel = createTextLabel(
+        dashGauge,
+        dashConfig.ReadyText or "Ready",
+        boldFont,
+        smallTextSize,
+        Enum.TextXAlignment.Center
+    )
     dashCooldownLabel.AnchorPoint = Vector2.new(0.5, 0.5)
     dashCooldownLabel.Position = UDim2.new(0.5, 0, 0.75, 0)
     dashCooldownLabel.TextScaled = true
+    dashCooldownLabel.TextColor3 = self.DashReadyColor or Color3.fromRGB(180, 255, 205)
 
     -- XP bar bottom-center
     local xpConfig = uiConfig.XP or {}
@@ -319,16 +345,24 @@ function HUDController:CreateInterface(playerGui: PlayerGui)
     local xpLabelHeight = xpConfig.LabelHeight or 20
     local xpSpacing = xpConfig.LevelSpacing or 12
     local xpLevelWidth = xpConfig.LevelWidth or 60
+    local xpBottomOffset = xpConfig.BottomOffset or 0
+    self.XPLabelPrefix = xpConfig.LabelPrefix or "XP"
 
     local xpContainer = Instance.new("Frame")
     xpContainer.Name = "XPContainer"
     xpContainer.BackgroundTransparency = 1
     xpContainer.AnchorPoint = Vector2.new(0.5, 1)
     xpContainer.Size = UDim2.new(0, xpBarWidth + xpSpacing + xpLevelWidth, 0, xpBarHeight + xpLabelHeight)
-    xpContainer.Position = UDim2.new(0.5, 0, 1, 0)
+    xpContainer.Position = UDim2.new(0.5, 0, 1, -xpBottomOffset)
     xpContainer.Parent = safeFrame
 
-    local xpLabel = createTextLabel(xpContainer, "XP 0 / ?", font, xpConfig.LabelTextSize or infoTextSize, Enum.TextXAlignment.Left)
+    local xpLabel = createTextLabel(
+        xpContainer,
+        string.format("%s 0 / ?", self.XPLabelPrefix),
+        font,
+        xpConfig.LabelTextSize or infoTextSize,
+        Enum.TextXAlignment.Left
+    )
     xpLabel.Size = UDim2.new(0, xpBarWidth, 0, xpLabelHeight)
     xpLabel.Position = UDim2.new(0, 0, 0, 0)
 
@@ -425,61 +459,52 @@ function HUDController:UpdateXP(state)
         return
     end
 
-    local level = state.Level or 1
+    local level = tonumber(state.Level) or 1
     levelLabel.Text = string.format("Lv %d", level)
 
     local progress = state.XPProgress
-    local ratio
-    local current
-    local required
+    local ratio = 0
+    local current = 0
+    local required = 0
 
     if typeof(progress) == "table" then
         if typeof(progress.Ratio) == "number" then
             ratio = math.clamp(progress.Ratio, 0, 1)
         end
-        if typeof(progress.Current) == "number" then
-            current = progress.Current
-        elseif typeof(progress.XP) == "number" then
-            current = progress.XP
+
+        local currentValue = progress.Current or progress.XP or progress.Value or progress.Amount
+        if typeof(currentValue) == "number" then
+            current = currentValue
         end
-        if typeof(progress.Required) == "number" then
-            required = progress.Required
-        elseif typeof(progress.Max) == "number" then
-            required = progress.Max
-        elseif typeof(progress.Goal) == "number" then
-            required = progress.Goal
-        elseif typeof(progress.ToNext) == "number" then
-            required = progress.ToNext
+
+        local requiredValue = progress.Required or progress.Max or progress.Goal or progress.ToNext
+        if typeof(requiredValue) == "number" then
+            required = requiredValue
         end
     end
 
-    if not ratio or ratio <= 0 then
-        local fallbackCurrent = typeof(state.XP) == "number" and state.XP or current or 0
-        local fallbackRequired = typeof(state.NextLevelXP) == "number" and state.NextLevelXP or required
-
-        current = fallbackCurrent
-        required = fallbackRequired
-
-        if required and required > 0 then
-            ratio = math.clamp(fallbackCurrent / required, 0, 1)
-        elseif ratio then
-            ratio = math.clamp(ratio, 0, 1)
-        else
-            ratio = 0
+    if ratio <= 0 then
+        if typeof(state.XP) == "number" then
+            current = state.XP
         end
-    else
-        current = current or state.XP or 0
-        required = required or state.NextLevelXP
+        if typeof(state.NextLevelXP) == "number" then
+            required = state.NextLevelXP
+        end
+
+        if required > 0 then
+            ratio = math.clamp(current / required, 0, 1)
+        end
     end
 
-    xpFill.Size = UDim2.new(ratio or 0, 0, 1, 0)
+    xpFill.Size = UDim2.new(math.clamp(ratio, 0, 1), 0, 1, 0)
 
-    if required and required > 0 then
-        xpLabel.Text = string.format("XP %d / %d", math.floor((current or 0) + 0.5), math.floor(required + 0.5))
-    elseif ratio and ratio > 0 then
-        xpLabel.Text = string.format("XP %d%%", math.floor(ratio * 100 + 0.5))
+    local prefix = self.XPLabelPrefix or "XP"
+    if required > 0 then
+        xpLabel.Text = string.format("%s %d / %d", prefix, math.floor(current + 0.5), math.floor(required + 0.5))
+    elseif ratio > 0 then
+        xpLabel.Text = string.format("%s %d%%", prefix, math.floor(ratio * 100 + 0.5))
     else
-        xpLabel.Text = "XP 0 / ?"
+        xpLabel.Text = string.format("%s 0 / ?", prefix)
     end
 end
 
@@ -490,9 +515,11 @@ function HUDController:UpdateSkillCooldowns(skillTable)
     end
 
     local info
+    local trackedId = self.PrimarySkillId
     if typeof(skillTable) == "table" then
-        info = skillTable.AOE_Blast or skillTable.Primary
-        if not info then
+        if trackedId and skillTable[trackedId] then
+            info = skillTable[trackedId]
+        else
             for _, entry in pairs(skillTable) do
                 if typeof(entry) == "table" then
                     info = entry
@@ -513,10 +540,12 @@ function HUDController:UpdateSkillCooldowns(skillTable)
         end
     end
 
+    local prefix = self.SkillKeyText or "Q"
     if remaining and remaining > 0.05 then
-        skillLabel.Text = string.format("Q: %.1fs", remaining)
+        local rounded = math.max(0, math.floor(remaining * 10 + 0.5) / 10)
+        skillLabel.Text = string.format("%s: %.1fs", prefix, rounded)
     else
-        skillLabel.Text = "Q: Ready"
+        skillLabel.Text = string.format("%s: Ready", prefix)
     end
 end
 
@@ -548,13 +577,17 @@ function HUDController:UpdateDashCooldown(dashData)
         progress = 1
     end
 
-    dashFill.Size = UDim2.new(1, 0, progress, 0)
+    dashFill.Size = UDim2.new(1, 0, math.clamp(progress, 0, 1), 0)
+
+    local readyText = self.DashReadyText or "Ready"
+    local readyColor = self.DashReadyColor or Color3.fromRGB(180, 255, 205)
 
     if remaining <= 0.05 then
-        dashCooldownLabel.Text = "Ready"
-        dashCooldownLabel.TextColor3 = (Config.UI and Config.UI.Dash and Config.UI.Dash.ReadyColor) or Color3.fromRGB(180, 255, 205)
+        dashCooldownLabel.Text = readyText
+        dashCooldownLabel.TextColor3 = readyColor
     else
-        dashCooldownLabel.Text = string.format("%.1f", remaining)
+        local rounded = math.max(0, math.floor(remaining * 10 + 0.5) / 10)
+        dashCooldownLabel.Text = string.format("%.1fs", rounded)
         dashCooldownLabel.TextColor3 = Color3.new(1, 1, 1)
     end
 end
@@ -684,6 +717,7 @@ function HUDController:CreatePartyEntry(parent: Instance)
     healthLabel.AnchorPoint = Vector2.new(1, 0)
     healthLabel.Size = UDim2.new(0.5, 0, 1, 0)
     healthLabel.Position = UDim2.new(1, -10, 0, 0)
+    healthLabel.TextTruncate = Enum.TextTruncate.AtEnd
 
     return {
         Frame = frame,

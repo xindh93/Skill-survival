@@ -133,6 +133,8 @@ xp.BackgroundTransparency = xp.BackgroundTransparency or 0.45
 xp.FillColor = xp.FillColor or Color3.fromRGB(88, 182, 255)
 xp.FillTransparency = xp.FillTransparency or 0.05
 xp.CornerRadius = xp.CornerRadius or 10
+xp.BottomOffset = xp.BottomOffset or 0
+xp.LabelPrefix = xp.LabelPrefix or "XP"
 
 ui.Dash = ui.Dash or {}
 local dash = ui.Dash
@@ -145,6 +147,8 @@ dash.StrokeColor = dash.StrokeColor or Color3.fromRGB(120, 200, 255)
 dash.StrokeThickness = dash.StrokeThickness or 2
 dash.StrokeTransparency = dash.StrokeTransparency or 0.2
 dash.ReadyColor = dash.ReadyColor or Color3.fromRGB(180, 255, 205)
+dash.KeyText = dash.KeyText or "E"
+dash.ReadyText = dash.ReadyText or "Ready"
 
 ui.Party = ui.Party or {}
 local party = ui.Party
@@ -171,5 +175,9 @@ abilities.Height = abilities.Height or 90
 abilities.SkillWidth = abilities.SkillWidth or 150
 abilities.SkillHeight = abilities.SkillHeight or 36
 abilities.Spacing = abilities.Spacing or 12
+abilities.BottomOffset = abilities.BottomOffset or 0
+abilities.SkillKey = abilities.SkillKey or "Q"
+abilities.PrimarySkillId = abilities.PrimarySkillId or "AOE_Blast"
+abilities.SkillTextSize = abilities.SkillTextSize or 18
 
 return Config
