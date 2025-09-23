@@ -136,7 +136,7 @@ function HUDController:CreateInterface(playerGui: PlayerGui)
     local resourceFrame = Instance.new("Frame")
     resourceFrame.Name = "Resources"
     resourceFrame.BackgroundTransparency = 1
-    resourceFrame.Size = UDim2.new(0, resourceWidth, 0, 0)
+    resourceFrame.Size = UDim2.new(0, resourceWidth, 0, uiConfig.ResourceHeight or 60)
     resourceFrame.Position = UDim2.new(0, 0, 0, topBarHeight + (uiConfig.SectionSpacing or 12))
     resourceFrame.Parent = safeFrame
     trySetAutomaticSize(resourceFrame, Enum.AutomaticSize.Y)
@@ -209,7 +209,7 @@ function HUDController:CreateInterface(playerGui: PlayerGui)
     partyContainer.Name = "PartyContainer"
     partyContainer.BackgroundTransparency = 1
     partyContainer.AnchorPoint = Vector2.new(1, 0.5)
-    partyContainer.Size = UDim2.new(0, partyConfig.Width or 240, 0, 0)
+    partyContainer.Size = UDim2.new(0, partyConfig.Width or 240, 0, partyConfig.EntryHeight or 42)
     partyContainer.Position = UDim2.new(1, 0, 0.5, 0)
     partyContainer.Parent = safeFrame
     trySetAutomaticSize(partyContainer, Enum.AutomaticSize.Y)
@@ -520,10 +520,13 @@ function HUDController:UpdateSkillCooldowns(skillTable)
         if trackedId and skillTable[trackedId] then
             info = skillTable[trackedId]
         else
-            for _, entry in pairs(skillTable) do
-                if typeof(entry) == "table" then
-                    info = entry
-                    break
+            info = skillTable.AOE_Blast or skillTable.Primary
+            if not info then
+                for _, entry in pairs(skillTable) do
+                    if typeof(entry) == "table" then
+                        info = entry
+                        break
+                    end
                 end
             end
         end
@@ -533,10 +536,16 @@ function HUDController:UpdateSkillCooldowns(skillTable)
     if info and typeof(info) == "table" then
         if typeof(info.Remaining) == "number" then
             remaining = math.max(0, info.Remaining)
-        elseif typeof(info.Timestamp) == "number" and typeof(info.Cooldown) == "number" then
+        else
             local now = Workspace:GetServerTimeNow()
-            local elapsed = now - info.Timestamp
-            remaining = math.max(0, info.Cooldown - elapsed)
+            if typeof(info.ReadyTime) == "number" then
+                remaining = math.max(0, info.ReadyTime - now)
+            elseif typeof(info.EndTime) == "number" then
+                remaining = math.max(0, info.EndTime - now)
+            elseif typeof(info.Timestamp) == "number" and typeof(info.Cooldown) == "number" then
+                local elapsed = now - info.Timestamp
+                remaining = math.max(0, info.Cooldown - elapsed)
+            end
         end
     end
 
@@ -560,11 +569,19 @@ function HUDController:UpdateDashCooldown(dashData)
     local cooldown = 0
 
     if typeof(dashData) == "table" then
-        if typeof(dashData.Remaining) == "number" then
-            remaining = math.max(0, dashData.Remaining)
-        end
         if typeof(dashData.Cooldown) == "number" then
             cooldown = math.max(0, dashData.Cooldown)
+        end
+
+        if typeof(dashData.Remaining) == "number" then
+            remaining = math.max(0, dashData.Remaining)
+        else
+            local now = Workspace:GetServerTimeNow()
+            if typeof(dashData.ReadyTime) == "number" then
+                remaining = math.max(0, dashData.ReadyTime - now)
+            elseif typeof(dashData.EndTime) == "number" then
+                remaining = math.max(0, dashData.EndTime - now)
+            end
         end
     end
 

@@ -9,6 +9,19 @@ local Config = require(ReplicatedStorage.Shared.Config)
 
 local ResultScreen = require(script.Parent.Parent.UI.ResultScreen)
 
+local function deepClone(value)
+    if typeof(value) ~= "table" then
+        return value
+    end
+
+    local copy = {}
+    for key, item in pairs(value) do
+        copy[key] = deepClone(item)
+    end
+
+    return copy
+end
+
 local UIController = Knit.CreateController({
     Name = "UIController",
 })
@@ -31,6 +44,14 @@ function UIController:KnitInit()
         },
         Party = {},
     }
+
+    self.Options = {
+        ShowNameplates = false,
+    }
+
+    self.NameplatePlayerAddedConn = nil
+    self.NameplatePlayerRemovingConn = nil
+    self.NameplateTrackedPlayers = {}
 end
 
 function UIController:KnitStart()
@@ -87,6 +108,10 @@ function UIController:KnitStart()
         self:OnPartyUpdate(partyData)
     end)
 
+    Net:GetEvent("HUDOptions").OnClientEvent:Connect(function(options)
+        self:ApplyOptions(options)
+    end)
+
     RunService.RenderStepped:Connect(function()
         local hud = self.HUD
         if not hud or not hud.Update then
@@ -141,6 +166,8 @@ function UIController:KnitStart()
     if self.HUD and self.HUD.Update then
         self.HUD:Update(self.State)
     end
+
+    self:SetNameplatesEnabled(self.Options.ShowNameplates, true)
 end
 
 function UIController:ApplyHUDUpdate(payload)
@@ -148,29 +175,19 @@ function UIController:ApplyHUDUpdate(payload)
         if key == "SkillCooldowns" then
             if typeof(value) == "table" then
                 for skillId, info in pairs(value) do
-                    if typeof(info) == "table" then
-                        self.State.SkillCooldowns[skillId] = table.clone(info)
-                    else
-                        self.State.SkillCooldowns[skillId] = info
-                    end
+                    self.State.SkillCooldowns[skillId] = deepClone(info)
                 end
             end
         elseif key == "DashCooldown" then
             self:OnDashCooldown(value)
         elseif key == "Party" then
-            if typeof(value) == "table" then
-                self.State.Party = table.clone(value)
-            else
-                self.State.Party = value
-            end
+            self.State.Party = deepClone(value)
         elseif key == "XPProgress" then
-            if typeof(value) == "table" then
-                self.State.XPProgress = table.clone(value)
-            else
-                self.State.XPProgress = value
-            end
+            self.State.XPProgress = deepClone(value)
         elseif key == "Level" then
             self.State.Level = value
+        elseif key == "Options" then
+            self:ApplyOptions(value)
         else
             self.State[key] = value
         end
@@ -198,6 +215,14 @@ function UIController:OnDashCooldown(data)
         end
         if typeof(data.Remaining) == "number" then
             remaining = math.max(0, data.Remaining)
+        else
+            if typeof(data.ReadyTime) == "number" then
+                remaining = math.max(0, data.ReadyTime - now)
+            elseif typeof(data.EndTime) == "number" then
+                remaining = math.max(0, data.EndTime - now)
+            elseif typeof(data.Timestamp) == "number" and typeof(data.Cooldown) == "number" then
+                remaining = math.max(0, data.Cooldown - (now - data.Timestamp))
+            end
         end
     end
 
@@ -215,12 +240,160 @@ function UIController:OnPartyUpdate(partyData)
     if typeof(partyData) ~= "table" then
         self.State.Party = {}
     else
-        self.State.Party = table.clone(partyData)
+        self.State.Party = deepClone(partyData)
     end
 
     if self.HUD and self.HUD.Update then
         self.HUD:Update(self.State)
     end
+end
+
+function UIController:ApplyOptions(options)
+    if typeof(options) ~= "table" then
+        return
+    end
+
+    if options.ShowNameplates ~= nil then
+        self:SetNameplatesEnabled(not not options.ShowNameplates)
+    end
+end
+
+function UIController:SetNameplatesEnabled(enabled, force)
+    enabled = not not enabled
+
+    if not force and self.Options.ShowNameplates == enabled then
+        return
+    end
+
+    self.Options.ShowNameplates = enabled
+
+    if enabled then
+        self:DisconnectNameplateTracking()
+        self:ApplyNameplateMode(Enum.HumanoidDisplayDistanceType.Viewer)
+    else
+        self:ConnectNameplateTracking()
+        self:ApplyNameplateMode(Enum.HumanoidDisplayDistanceType.None)
+    end
+end
+
+function UIController:ApplyNameplateMode(displayType)
+    for _, player in ipairs(Players:GetPlayers()) do
+        self:ApplyNameplateToPlayer(player, displayType)
+    end
+end
+
+function UIController:ApplyNameplateToPlayer(player, displayType)
+    local character = player and player.Character
+    if character then
+        self:ApplyNameplateToCharacter(character, displayType)
+    end
+end
+
+function UIController:ApplyNameplateToCharacter(character, displayType)
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        humanoid.DisplayDistanceType = displayType
+    end
+end
+
+function UIController:ConnectNameplateTracking()
+    self:DisconnectNameplateTracking()
+
+    self.NameplateTrackedPlayers = {}
+
+    local function track(player)
+        self:TrackPlayerNameplate(player)
+    end
+
+    self.NameplatePlayerAddedConn = Players.PlayerAdded:Connect(track)
+    self.NameplatePlayerRemovingConn = Players.PlayerRemoving:Connect(function(player)
+        self:UntrackPlayerNameplate(player)
+    end)
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        track(player)
+    end
+end
+
+function UIController:DisconnectNameplateTracking()
+    if self.NameplatePlayerAddedConn then
+        self.NameplatePlayerAddedConn:Disconnect()
+        self.NameplatePlayerAddedConn = nil
+    end
+
+    if self.NameplatePlayerRemovingConn then
+        self.NameplatePlayerRemovingConn:Disconnect()
+        self.NameplatePlayerRemovingConn = nil
+    end
+
+    for player, connections in pairs(self.NameplateTrackedPlayers) do
+        if connections.CharacterAdded then
+            connections.CharacterAdded:Disconnect()
+        end
+        if connections.CharacterRemoving then
+            connections.CharacterRemoving:Disconnect()
+        end
+        if connections.ChildAdded then
+            connections.ChildAdded:Disconnect()
+        end
+        self.NameplateTrackedPlayers[player] = nil
+    end
+end
+
+function UIController:TrackPlayerNameplate(player)
+    self:UntrackPlayerNameplate(player)
+
+    local connections = {}
+    self.NameplateTrackedPlayers[player] = connections
+
+    local function apply(character)
+        self:ApplyNameplateToCharacter(character, Enum.HumanoidDisplayDistanceType.None)
+
+        if connections.ChildAdded then
+            connections.ChildAdded:Disconnect()
+        end
+
+        connections.ChildAdded = character.ChildAdded:Connect(function(child)
+            if child:IsA("Humanoid") then
+                self:ApplyNameplateToCharacter(character, Enum.HumanoidDisplayDistanceType.None)
+            end
+        end)
+    end
+
+    if player.Character then
+        apply(player.Character)
+    end
+
+    connections.CharacterAdded = player.CharacterAdded:Connect(function(character)
+        apply(character)
+    end)
+
+    connections.CharacterRemoving = player.CharacterRemoving:Connect(function(character)
+        if connections.ChildAdded then
+            connections.ChildAdded:Disconnect()
+            connections.ChildAdded = nil
+        end
+        self:ApplyNameplateToCharacter(character, Enum.HumanoidDisplayDistanceType.Viewer)
+    end)
+end
+
+function UIController:UntrackPlayerNameplate(player)
+    local connections = self.NameplateTrackedPlayers[player]
+    if not connections then
+        return
+    end
+
+    if connections.CharacterAdded then
+        connections.CharacterAdded:Disconnect()
+    end
+    if connections.CharacterRemoving then
+        connections.CharacterRemoving:Disconnect()
+    end
+    if connections.ChildAdded then
+        connections.ChildAdded:Disconnect()
+    end
+
+    self.NameplateTrackedPlayers[player] = nil
 end
 
 return UIController
