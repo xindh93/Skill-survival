@@ -55,10 +55,30 @@ function HUDController:KnitStart()
     end
 
     local playerGui = player:WaitForChild("PlayerGui")
-    self:CreateInterface(playerGui)
+    if not self.Screen then
+        self:CreateInterface(playerGui)
+    end
 end
 
 function HUDController:CreateInterface(playerGui: PlayerGui)
+    if self.LastMessageTask then
+        self.LastMessageTask()
+        self.LastMessageTask = nil
+    end
+
+    if self.LastWaveTask then
+        self.LastWaveTask()
+        self.LastWaveTask = nil
+    end
+
+    if self.Screen then
+        self.Screen:Destroy()
+        self.Screen = nil
+    end
+
+    self.Elements = {}
+    self.PartyEntries = {}
+
     local uiConfig = Config.UI or {}
     local font = uiConfig.Font or Enum.Font.Gotham
     local boldFont = uiConfig.BoldFont or Enum.Font.GothamBold
