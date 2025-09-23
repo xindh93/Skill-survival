@@ -89,6 +89,98 @@ do
     end
 end
 
+
+Config.UI = Config.UI or {}
+
+local ui = Config.UI
+ui.SafeMargin = ui.SafeMargin or 24
+ui.Font = ui.Font or Enum.Font.Gotham
+ui.BoldFont = ui.BoldFont or Enum.Font.GothamBold
+ui.TopBarHeight = ui.TopBarHeight or 52
+ui.TopBarBackgroundColor = ui.TopBarBackgroundColor or Color3.fromRGB(18, 24, 32)
+ui.TopBarTransparency = ui.TopBarTransparency or 0.32
+ui.TopLabelTextSize = ui.TopLabelTextSize or 20
+ui.InfoTextSize = ui.InfoTextSize or 18
+ui.SmallTextSize = ui.SmallTextSize or 16
+ui.TopInfoWidth = ui.TopInfoWidth or 240
+ui.ResourceHeight = ui.ResourceHeight or 60
+ui.ResourcePadding = ui.ResourcePadding or 6
+ui.SectionSpacing = ui.SectionSpacing or 14
+ui.AlertAreaOffset = ui.AlertAreaOffset or 14
+ui.AlertAreaWidth = ui.AlertAreaWidth or 440
+ui.AlertAreaHeight = ui.AlertAreaHeight or 140
+ui.AlertPadding = ui.AlertPadding or 8
+ui.AlertTextSize = ui.AlertTextSize or 20
+ui.ReservedAlertHeight = ui.ReservedAlertHeight or 56
+ui.ReservedAlertCornerRadius = ui.ReservedAlertCornerRadius or 10
+ui.AlertBackgroundColor = ui.AlertBackgroundColor or Color3.fromRGB(18, 24, 32)
+ui.AlertBackgroundTransparency = ui.AlertBackgroundTransparency or 0.35
+ui.MessageHeight = ui.MessageHeight or 40
+ui.WaveAnnouncementHeight = ui.WaveAnnouncementHeight or 48
+ui.MessageDuration = ui.MessageDuration or 3
+ui.DisplayOrder = ui.DisplayOrder or { HUD = 0 }
+
+ui.XP = ui.XP or {}
+local xp = ui.XP
+xp.BarWidth = xp.BarWidth or 380
+xp.BarHeight = xp.BarHeight or 18
+xp.LevelWidth = xp.LevelWidth or 60
+xp.LevelSpacing = xp.LevelSpacing or 12
+xp.LabelHeight = xp.LabelHeight or 20
+xp.LabelTextSize = xp.LabelTextSize or 18
+xp.LevelTextSize = xp.LevelTextSize or 24
+xp.BackgroundColor = xp.BackgroundColor or Color3.fromRGB(18, 24, 32)
+xp.BackgroundTransparency = xp.BackgroundTransparency or 0.45
+xp.FillColor = xp.FillColor or Color3.fromRGB(88, 182, 255)
+xp.FillTransparency = xp.FillTransparency or 0.05
+xp.CornerRadius = xp.CornerRadius or 10
+xp.BottomOffset = xp.BottomOffset or 0
+xp.LabelPrefix = xp.LabelPrefix or "XP"
+
+ui.Dash = ui.Dash or {}
+local dash = ui.Dash
+dash.Size = dash.Size or 72
+dash.BackgroundColor = dash.BackgroundColor or Color3.fromRGB(18, 24, 32)
+dash.BackgroundTransparency = dash.BackgroundTransparency or 0.25
+dash.FillColor = dash.FillColor or Color3.fromRGB(120, 200, 255)
+dash.FillTransparency = dash.FillTransparency or 0.15
+dash.StrokeColor = dash.StrokeColor or Color3.fromRGB(120, 200, 255)
+dash.StrokeThickness = dash.StrokeThickness or 2
+dash.StrokeTransparency = dash.StrokeTransparency or 0.2
+dash.ReadyColor = dash.ReadyColor or Color3.fromRGB(180, 255, 205)
+dash.KeyText = dash.KeyText or "E"
+dash.ReadyText = dash.ReadyText or "Ready"
+
+ui.Party = ui.Party or {}
+local party = ui.Party
+party.Width = party.Width or 240
+party.Padding = party.Padding or 8
+party.EntryHeight = party.EntryHeight or 42
+party.BackgroundColor = party.BackgroundColor or Color3.fromRGB(18, 24, 32)
+party.BackgroundTransparency = party.BackgroundTransparency or 0.25
+party.LocalPlayerTransparency = party.LocalPlayerTransparency or 0.18
+party.CornerRadius = party.CornerRadius or 10
+party.StrokeColor = party.StrokeColor or Color3.fromRGB(80, 120, 160)
+party.StrokeThickness = party.StrokeThickness or 1.5
+party.StrokeTransparency = party.StrokeTransparency or 0.35
+party.HealthFillColor = party.HealthFillColor or Color3.fromRGB(88, 255, 120)
+party.HealthFillTransparency = party.HealthFillTransparency or 0.25
+party.NameTextSize = party.NameTextSize or 16
+party.HealthTextSize = party.HealthTextSize or 15
+party.EmptyText = party.EmptyText or "No party members"
+
+ui.Abilities = ui.Abilities or {}
+local abilities = ui.Abilities
+abilities.Width = abilities.Width or 260
+abilities.Height = abilities.Height or 90
+abilities.SkillWidth = abilities.SkillWidth or 150
+abilities.SkillHeight = abilities.SkillHeight or 36
+abilities.Spacing = abilities.Spacing or 12
+abilities.BottomOffset = abilities.BottomOffset or 0
+abilities.SkillKey = abilities.SkillKey or "Q"
+abilities.PrimarySkillId = abilities.PrimarySkillId or "AOE_Blast"
+abilities.SkillTextSize = abilities.SkillTextSize or 18
+
 Config.UI = {
     SafeMargin = 24,
     Font = Enum.Font.Gotham,

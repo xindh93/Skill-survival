@@ -1,3 +1,29 @@
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+
+local Knit = require(ReplicatedStorage.Shared.Knit)
+local Net = require(ReplicatedStorage.Shared.Net)
+local Config = require(ReplicatedStorage.Shared.Config)
+
+local ResultScreen = require(script.Parent.Parent.UI.ResultScreen)
+
+local function deepClone(value)
+    if typeof(value) ~= "table" then
+        return value
+    end
+
+    local copy = {}
+    for key, item in pairs(value) do
+        copy[key] = deepClone(item)
+    end
+
+    return copy
+end
+
+
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -7,6 +33,7 @@ local Net = require(ReplicatedStorage.Shared.Net)
 local Config = require(ReplicatedStorage.Shared.Config)
 
 local ResultScreen = require(script.Parent.Parent.UI.ResultScreen)
+
 
 local UIController = Knit.CreateController({
     Name = "UIController",
@@ -41,17 +68,53 @@ function UIController:KnitInit()
 end
 
 function UIController:KnitStart()
-    local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
+
+    local player = Players.LocalPlayer
+    if not player then
+        return
+    end
+
+    local playerGui = player:WaitForChild("PlayerGui")
+
+
     self.HUD = Knit.GetController("HUDController")
     if self.HUD and self.HUD.CreateInterface and not self.HUD.Screen then
         self.HUD:CreateInterface(playerGui)
     end
+
     self.ResultScreen = ResultScreen.new(playerGui)
 
     Net:GetEvent("HUD").OnClientEvent:Connect(function(payload)
         self:ApplyHUDUpdate(payload)
     end)
 
+
+    Net:GetEvent("GameState").OnClientEvent:Connect(function(data)
+        local hud = self.HUD
+        if data.Type == "WaveStart" then
+            if hud and hud.PlayWaveAnnouncement then
+                hud:PlayWaveAnnouncement(data.Wave)
+            end
+        elseif data.Type == "TeleportFailed" then
+            if hud and hud.ShowMessage then
+                hud:ShowMessage("Teleport failed: " .. tostring(data.Message))
+            end
+        end
+    end)
+
+    Net:GetEvent("Result").OnClientEvent:Connect(function(summary)
+        local hud = self.HUD
+        if hud and hud.ShowMessage then
+            hud:ShowMessage("Session ended: " .. tostring(summary.Reason))
+        end
+        self.ResultScreen:Show(summary)
+    end)
+
+    Net:GetEvent("Combat").OnClientEvent:Connect(function(event)
+        local hud = self.HUD
+        if hud and hud.ShowAOE and event.Type == "AOE" then
+            hud:ShowAOE(event.Position, event.Radius)
+        
     Net:GetEvent("GameState").OnClientEvent:Connect(function(data)
         if data.Type == "WaveStart" then
             self.HUD:PlayWaveAnnouncement(data.Wave)
@@ -68,6 +131,7 @@ function UIController:KnitStart()
     Net:GetEvent("Combat").OnClientEvent:Connect(function(event)
         if event.Type == "AOE" then
             self.HUD:ShowAOE(event.Position, event.Radius)
+
         end
     end)
 
@@ -84,6 +148,61 @@ function UIController:KnitStart()
     end)
 
     RunService.RenderStepped:Connect(function()
+
+        local hud = self.HUD
+        if not hud or not hud.Update then
+            return
+        end
+
+        local now = Workspace:GetServerTimeNow()
+        local hasActive = false
+        local toClear = nil
+        local needsUpdate = false
+
+        local dash = self.State.DashCooldown
+        if dash and dash.ReadyTime and dash.ReadyTime > 0 then
+            local newRemaining = math.max(0, dash.ReadyTime - now)
+            if dash.Remaining == nil or math.abs(newRemaining - dash.Remaining) > 0.01 then
+                dash.Remaining = newRemaining
+                needsUpdate = true
+            else
+                dash.Remaining = newRemaining
+            end
+        end
+
+        for skillId, info in pairs(self.State.SkillCooldowns) do
+            local cooldown = info.Cooldown or 0
+            local timestamp = info.Timestamp
+
+            if not timestamp or cooldown <= 0 then
+                toClear = toClear or {}
+                table.insert(toClear, skillId)
+            else
+                local elapsed = now - timestamp
+                if elapsed >= cooldown then
+                    toClear = toClear or {}
+                    table.insert(toClear, skillId)
+                else
+                    hasActive = true
+                end
+            end
+        end
+
+        if toClear then
+            for _, skillId in ipairs(toClear) do
+                self.State.SkillCooldowns[skillId] = nil
+            end
+        end
+
+        if needsUpdate or hasActive or toClear then
+            hud:Update(self.State)
+        end
+    end)
+
+    if self.HUD and self.HUD.Update then
+        self.HUD:Update(self.State)
+    end
+
         if not self.HUD then
             return
         end
@@ -137,21 +256,35 @@ function UIController:KnitStart()
 
     self.HUD:Update(self.State)
 
+
     self:SetNameplatesEnabled(self.Options.ShowNameplates, true)
 end
 
 function UIController:ApplyHUDUpdate(payload)
     for key, value in pairs(payload) do
         if key == "SkillCooldowns" then
+
+            if typeof(value) == "table" then
+                for skillId, info in pairs(value) do
+                    self.State.SkillCooldowns[skillId] = deepClone(info)
+                end
+
             for skillId, info in pairs(value) do
                 self.State.SkillCooldowns[skillId] = info
+
             end
         elseif key == "DashCooldown" then
             self:OnDashCooldown(value)
         elseif key == "Party" then
+
+            self.State.Party = deepClone(value)
+        elseif key == "XPProgress" then
+            self.State.XPProgress = deepClone(value)
+
             self.State.Party = value
         elseif key == "XPProgress" then
             self.State.XPProgress = value
+
         elseif key == "Level" then
             self.State.Level = value
         elseif key == "Options" then
@@ -160,6 +293,47 @@ function UIController:ApplyHUDUpdate(payload)
             self.State[key] = value
         end
     end
+
+
+    if self.HUD and self.HUD.Update then
+        self.HUD:Update(self.State)
+    end
+end
+
+function UIController:OnDashCooldown(data)
+    local dashState = self.State.DashCooldown
+    if not dashState then
+        dashState = {}
+        self.State.DashCooldown = dashState
+    end
+
+    local now = Workspace:GetServerTimeNow()
+    local cooldown = dashState.Cooldown or 0
+    local remaining = dashState.Remaining or 0
+
+    if typeof(data) == "table" then
+        if typeof(data.Cooldown) == "number" then
+            cooldown = math.max(0, data.Cooldown)
+        end
+        if typeof(data.Remaining) == "number" then
+            remaining = math.max(0, data.Remaining)
+        else
+            if typeof(data.ReadyTime) == "number" then
+                remaining = math.max(0, data.ReadyTime - now)
+            elseif typeof(data.EndTime) == "number" then
+                remaining = math.max(0, data.EndTime - now)
+            elseif typeof(data.Timestamp) == "number" and typeof(data.Cooldown) == "number" then
+                remaining = math.max(0, data.Cooldown - (now - data.Timestamp))
+            end
+        end
+    end
+
+    dashState.Cooldown = cooldown
+    dashState.Remaining = remaining
+    dashState.ReadyTime = now + remaining
+    dashState.LastUpdate = now
+
+    if self.HUD and self.HUD.Update then
 
     self.HUD:Update(self.State)
 end
@@ -190,6 +364,7 @@ function UIController:OnDashCooldown(data)
     dashState.LastUpdate = now
 
     if self.HUD then
+
         self.HUD:Update(self.State)
     end
 end
@@ -198,10 +373,17 @@ function UIController:OnPartyUpdate(partyData)
     if typeof(partyData) ~= "table" then
         self.State.Party = {}
     else
+
+        self.State.Party = deepClone(partyData)
+    end
+
+    if self.HUD and self.HUD.Update then
+
         self.State.Party = partyData
     end
 
     if self.HUD then
+
         self.HUD:Update(self.State)
     end
 end
@@ -241,7 +423,11 @@ function UIController:ApplyNameplateMode(displayType)
 end
 
 function UIController:ApplyNameplateToPlayer(player, displayType)
+
+    local character = player and player.Character
+
     local character = player.Character
+
     if character then
         self:ApplyNameplateToCharacter(character, displayType)
     end
@@ -278,6 +464,7 @@ function UIController:DisconnectNameplateTracking()
         self.NameplatePlayerAddedConn:Disconnect()
         self.NameplatePlayerAddedConn = nil
     end
+
     if self.NameplatePlayerRemovingConn then
         self.NameplatePlayerRemovingConn:Disconnect()
         self.NameplatePlayerRemovingConn = nil
@@ -305,9 +492,17 @@ function UIController:TrackPlayerNameplate(player)
 
     local function apply(character)
         self:ApplyNameplateToCharacter(character, Enum.HumanoidDisplayDistanceType.None)
+
+
         if connections.ChildAdded then
             connections.ChildAdded:Disconnect()
         end
+
+
+        if connections.ChildAdded then
+            connections.ChildAdded:Disconnect()
+        end
+
         connections.ChildAdded = character.ChildAdded:Connect(function(child)
             if child:IsA("Humanoid") then
                 self:ApplyNameplateToCharacter(character, Enum.HumanoidDisplayDistanceType.None)
@@ -350,5 +545,9 @@ function UIController:UntrackPlayerNameplate(player)
 
     self.NameplateTrackedPlayers[player] = nil
 end
+
+
+return UIController
+
 
 return UIController
