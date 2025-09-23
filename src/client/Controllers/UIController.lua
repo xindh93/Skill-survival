@@ -6,7 +6,6 @@ local Knit = require(ReplicatedStorage.Shared.Knit)
 local Net = require(ReplicatedStorage.Shared.Net)
 local Config = require(ReplicatedStorage.Shared.Config)
 
-local HUD = require(script.Parent.Parent.UI.HUD)
 local ResultScreen = require(script.Parent.Parent.UI.ResultScreen)
 
 local UIController = Knit.CreateController({
@@ -21,18 +20,24 @@ function UIController:KnitInit()
         TimeRemaining = -1,
         Gold = 0,
         XP = 0,
+        Level = 1,
+        XPProgress = nil,
         SkillCooldowns = {},
         DashCooldown = {
             Remaining = 0,
             Cooldown = (Config.Skill and Config.Skill.Dash and Config.Skill.Dash.Cooldown) or 6,
             ReadyTime = 0,
         },
+        Party = {},
     }
 end
 
 function UIController:KnitStart()
     local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
-    self.HUD = HUD.new(playerGui)
+    self.HUD = Knit.GetController("HUDController")
+    if self.HUD and self.HUD.CreateInterface and not self.HUD.Screen then
+        self.HUD:CreateInterface(playerGui)
+    end
     self.ResultScreen = ResultScreen.new(playerGui)
 
     Net:GetEvent("HUD").OnClientEvent:Connect(function(payload)
@@ -60,6 +65,10 @@ function UIController:KnitStart()
 
     Net:GetEvent("DashCooldown").OnClientEvent:Connect(function(data)
         self:OnDashCooldown(data)
+    end)
+
+    Net:GetEvent("PartyUpdate").OnClientEvent:Connect(function(partyData)
+        self:OnPartyUpdate(partyData)
     end)
 
     RunService.RenderStepped:Connect(function()
@@ -125,6 +134,12 @@ function UIController:ApplyHUDUpdate(payload)
             end
         elseif key == "DashCooldown" then
             self:OnDashCooldown(value)
+        elseif key == "Party" then
+            self.State.Party = value
+        elseif key == "XPProgress" then
+            self.State.XPProgress = value
+        elseif key == "Level" then
+            self.State.Level = value
         else
             self.State[key] = value
         end
@@ -157,6 +172,18 @@ function UIController:OnDashCooldown(data)
     dashState.Remaining = remaining
     dashState.ReadyTime = now + remaining
     dashState.LastUpdate = now
+
+    if self.HUD then
+        self.HUD:Update(self.State)
+    end
+end
+
+function UIController:OnPartyUpdate(partyData)
+    if typeof(partyData) ~= "table" then
+        self.State.Party = {}
+    else
+        self.State.Party = partyData
+    end
 
     if self.HUD then
         self.HUD:Update(self.State)
