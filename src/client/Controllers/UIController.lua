@@ -62,12 +62,6 @@ function UIController:KnitStart()
         self.ResultScreen:Show(summary)
     end)
 
-    Net:GetEvent("Combat").OnClientEvent:Connect(function(event)
-        if event.Type == "AOE" then
-            self.HUD:ShowAOE(event.Position, event.Radius)
-        end
-    end)
-
     Net:GetEvent("DashCooldown").OnClientEvent:Connect(function(data)
         self:OnDashCooldown(data)
     end)

@@ -915,6 +915,7 @@ function HUDController:PlayWaveAnnouncement(wave: number)
     end)
 end
 
+
 function HUDController:ShowAOE(position: Vector3, radius: number)
     if typeof(position) ~= "Vector3" then
         return

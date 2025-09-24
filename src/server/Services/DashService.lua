@@ -179,9 +179,6 @@ function DashService:HandleDashRequest(player: Player, rawDirection)
     end
     params.FilterDescendantsInstances = ignore
 
-    params.FilterDescendantsInstances = {character}
-
-
     local raycast = Workspace:Raycast(root.Position, direction * dashDistance, params)
     if raycast then
         dashDistance = math.min(dashDistance, math.max(0, raycast.Distance - 1))
@@ -197,6 +194,10 @@ function DashService:HandleDashRequest(player: Player, rawDirection)
     local startPos = root.Position
     local targetPos = startPos + direction * dashDistance
     targetPos = Vector3.new(targetPos.X, startPos.Y, targetPos.Z)
+
+
+    targetPos = self:SnapToGround(character, root, targetPos)
+
 
     targetPos = self:SnapToGround(character, root, targetPos)
 
