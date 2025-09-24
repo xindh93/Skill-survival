@@ -107,30 +107,53 @@ function UIController:KnitStart()
 
         for skillId, info in pairs(self.State.SkillCooldowns) do
             local cooldown = info and info.Cooldown or 0
-            local timestamp = info and info.Timestamp
-
-            if typeof(timestamp) ~= "number" or cooldown <= 0 then
+            if cooldown <= 0 then
                 toClear = toClear or {}
                 table.insert(toClear, skillId)
             else
-                local endTime = info.EndTime
-                if typeof(endTime) ~= "number" then
-                    endTime = timestamp + cooldown
-                    info.EndTime = endTime
+                local readyTime = info and info.ReadyTime
+                if typeof(readyTime) ~= "number" then
+                    local endTime = info and info.EndTime
+                    if typeof(endTime) == "number" then
+                        readyTime = endTime
+                    end
+                end
+                if typeof(readyTime) ~= "number" then
+                    local timestamp = info and info.Timestamp
+                    if typeof(timestamp) == "number" then
+                        readyTime = timestamp + cooldown
+                    end
+                end
+                if typeof(readyTime) ~= "number" then
+                    local remainingValue = info and info.Remaining
+                    if typeof(remainingValue) == "number" then
+                        readyTime = now + remainingValue
+                    end
                 end
 
-                local remaining = endTime - now
-                if remaining <= 0 then
+                if typeof(readyTime) ~= "number" then
                     toClear = toClear or {}
                     table.insert(toClear, skillId)
-                    needsUpdate = true
                 else
-                    hasActiveSkill = true
-                    if info.Remaining == nil or math.abs(remaining - info.Remaining) > 0.05 then
-                        info.Remaining = remaining
+                    info.EndTime = readyTime
+                    info.ReadyTime = readyTime
+                    if typeof(info.Timestamp) ~= "number" then
+                        info.Timestamp = readyTime - cooldown
+                    end
+
+                    local remaining = readyTime - now
+                    if remaining <= 0 then
+                        toClear = toClear or {}
+                        table.insert(toClear, skillId)
                         needsUpdate = true
                     else
-                        info.Remaining = remaining
+                        hasActiveSkill = true
+                        if info.Remaining == nil or math.abs(remaining - info.Remaining) > 0.05 then
+                            info.Remaining = remaining
+                            needsUpdate = true
+                        else
+                            info.Remaining = remaining
+                        end
                     end
                 end
             end
@@ -185,12 +208,57 @@ function UIController:ApplyHUDUpdate(payload)
         if key == "SkillCooldowns" then
             for skillId, info in pairs(value) do
                 if typeof(info) == "table" then
-                    if typeof(info.Remaining) == "number" and info.Remaining > 0 then
-                        info.EndTime = now + info.Remaining
-                    else
-                        info.EndTime = nil
+                    local entry = self.State.SkillCooldowns[skillId]
+                    if typeof(entry) ~= "table" then
+                        entry = {}
+                        self.State.SkillCooldowns[skillId] = entry
                     end
-                    self.State.SkillCooldowns[skillId] = info
+
+                    local cooldown = entry.Cooldown or 0
+                    if typeof(info.Cooldown) == "number" then
+                        cooldown = math.max(0, info.Cooldown)
+                        entry.Cooldown = cooldown
+                    elseif entry.Cooldown == nil then
+                        entry.Cooldown = cooldown
+                    end
+
+                    if typeof(info.Timestamp) == "number" then
+                        entry.Timestamp = info.Timestamp
+                    end
+
+                    local readyTime = info.ReadyTime
+                    if typeof(readyTime) ~= "number" then
+                        if typeof(info.EndTime) == "number" then
+                            readyTime = info.EndTime
+                        elseif typeof(entry.Timestamp) == "number" and cooldown > 0 then
+                            readyTime = entry.Timestamp + cooldown
+                        elseif typeof(info.Remaining) == "number" then
+                            readyTime = now + math.max(0, info.Remaining)
+                        end
+                    end
+
+                    entry.ReadyTime = readyTime
+                    if typeof(readyTime) == "number" then
+                        entry.EndTime = readyTime
+                        if (typeof(entry.Timestamp) ~= "number" or entry.Timestamp <= 0) and cooldown > 0 then
+                            entry.Timestamp = readyTime - cooldown
+                        end
+                        entry.Remaining = math.max(0, readyTime - now)
+                    elseif typeof(info.Remaining) == "number" then
+                        local normalized = math.max(0, info.Remaining)
+                        entry.Remaining = normalized
+                        entry.EndTime = now + normalized
+                        entry.ReadyTime = entry.EndTime
+                    else
+                        entry.Remaining = nil
+                        entry.EndTime = nil
+                    end
+
+                    for keyName, value in pairs(info) do
+                        if entry[keyName] == nil then
+                            entry[keyName] = value
+                        end
+                    end
                 else
                     self.State.SkillCooldowns[skillId] = nil
                 end
@@ -276,19 +344,24 @@ function UIController:OnDashCooldown(data)
     local now = Workspace:GetServerTimeNow()
     local cooldown = dashState.Cooldown or 0
     local remaining = dashState.Remaining or 0
+    local readyTime = dashState.ReadyTime or (now + remaining)
 
     if typeof(data) == "table" then
         if typeof(data.Cooldown) == "number" then
             cooldown = math.max(0, data.Cooldown)
         end
-        if typeof(data.Remaining) == "number" then
+        if typeof(data.ReadyTime) == "number" then
+            readyTime = data.ReadyTime
+            remaining = math.max(0, readyTime - now)
+        elseif typeof(data.Remaining) == "number" then
             remaining = math.max(0, data.Remaining)
+            readyTime = now + remaining
         end
     end
 
     dashState.Cooldown = cooldown
     dashState.Remaining = remaining
-    dashState.ReadyTime = now + remaining
+    dashState.ReadyTime = readyTime
     dashState.LastUpdate = now
 
     if self.HUD then

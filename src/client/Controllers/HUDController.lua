@@ -625,7 +625,10 @@ function HUDController:UpdateSkillCooldowns(skillTable)
         if typeof(info.Cooldown) == "number" then
             cooldown = math.max(0, info.Cooldown)
         end
-        if typeof(info.Remaining) == "number" then
+        if typeof(info.ReadyTime) == "number" then
+            local now = Workspace:GetServerTimeNow()
+            remaining = math.max(0, info.ReadyTime - now)
+        elseif typeof(info.Remaining) == "number" then
             remaining = math.max(0, info.Remaining)
         elseif typeof(info.Timestamp) == "number" then
             local now = Workspace:GetServerTimeNow()
@@ -670,11 +673,14 @@ function HUDController:UpdateDashCooldown(dashData)
     local cooldown = 0
 
     if typeof(dashData) == "table" then
-        if typeof(dashData.Remaining) == "number" then
-            remaining = math.max(0, dashData.Remaining)
-        end
         if typeof(dashData.Cooldown) == "number" then
             cooldown = math.max(0, dashData.Cooldown)
+        end
+        if typeof(dashData.ReadyTime) == "number" then
+            local now = Workspace:GetServerTimeNow()
+            remaining = math.max(0, dashData.ReadyTime - now)
+        elseif typeof(dashData.Remaining) == "number" then
+            remaining = math.max(0, dashData.Remaining)
         end
     end
 
