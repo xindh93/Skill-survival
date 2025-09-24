@@ -252,6 +252,18 @@ function HUDController:CreateInterface(playerGui: PlayerGui)
     messageLabel.TextTransparency = 1
     messageLabel.Size = UDim2.new(1, 0, 0, uiConfig.MessageHeight or 40)
 
+    local reservedAlert = Instance.new("Frame")
+    reservedAlert.Name = "ReservedAlerts"
+    reservedAlert.BackgroundTransparency = uiConfig.AlertBackgroundTransparency or 0.35
+    reservedAlert.BackgroundColor3 = uiConfig.AlertBackgroundColor or Color3.fromRGB(18, 24, 32)
+    reservedAlert.BorderSizePixel = 0
+    reservedAlert.Size = UDim2.new(1, 0, 0, uiConfig.ReservedAlertHeight or 52)
+    reservedAlert.LayoutOrder = 0
+    reservedAlert.Parent = alertArea
+
+    local reservedLabel = createTextLabel(reservedAlert, "", font, alertTextSize, Enum.TextXAlignment.Center)
+    reservedLabel.Text = ""
+
     local partyContainer = Instance.new("Frame")
     partyContainer.Name = "PartyContainer"
     partyContainer.BackgroundTransparency = 1
@@ -375,6 +387,8 @@ function HUDController:CreateInterface(playerGui: PlayerGui)
         DashCooldownLabel = dashCooldownLabel,
         MessageLabel = messageLabel,
         WaveAnnouncement = waveAnnouncement,
+        ReservedAlert = reservedAlert,
+        ReservedAlertLabel = reservedLabel,
         PartyContainer = partyContainer,
         PartyEmptyLabel = partyEmptyLabel,
         XPFill = xpFill,
