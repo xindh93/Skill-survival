@@ -1,10 +1,14 @@
 local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local PhysicsService = game:GetService("PhysicsService")
 
 local Knit = require(ReplicatedStorage.Shared.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Net = require(ReplicatedStorage.Shared.Net)
+
+local PLAYER_COLLISION_GROUP = "SkillSurvivalPlayers"
+local ENEMY_COLLISION_GROUP = "SkillSurvivalEnemies"
 
 local GameStateService = Knit.CreateService({
     Name = "GameStateService",
@@ -23,6 +27,18 @@ function GameStateService:KnitStart()
     self.EnemyService = Knit.GetService("EnemyService")
     self.RewardService = Knit.GetService("RewardService")
     self.MapService = Knit.GetService("MapService")
+
+    if self.EnemyService then
+        self.PlayerCollisionGroup = self.EnemyService:GetPlayerCollisionGroup()
+        self.EnemyCollisionGroup = self.EnemyService:GetEnemyCollisionGroup()
+        if self.EnemyService.EnsureCollisionGroups then
+            self.EnemyService:EnsureCollisionGroups()
+        end
+    end
+
+    self.PlayerCollisionGroup = self.PlayerCollisionGroup or PLAYER_COLLISION_GROUP
+    self.EnemyCollisionGroup = self.EnemyCollisionGroup or ENEMY_COLLISION_GROUP
+    self:EnsureCollisionGroups()
 
     if self.EnemyService.EnemyCountChanged then
         self.EnemyService.EnemyCountChanged:Connect(function()
@@ -46,17 +62,75 @@ function GameStateService:KnitStart()
 
     Players.PlayerAdded:Connect(function(player)
         player.CharacterAdded:Connect(function(character)
-            task.defer(function()
-                self:TeleportCharacterToSpawn(character)
-            end)
+            self:OnCharacterAdded(player, character)
         end)
     end)
 
     for _, player in ipairs(Players:GetPlayers()) do
         if player.Character then
-            self:TeleportCharacterToSpawn(player.Character)
+            self:OnCharacterAdded(player, player.Character)
         end
     end
+end
+
+function GameStateService:EnsureCollisionGroups()
+    local function ensure(name: string)
+        if typeof(name) ~= "string" or name == "" then
+            return
+        end
+
+        local exists = pcall(function()
+            PhysicsService:GetCollisionGroupId(name)
+        end)
+        if not exists then
+            PhysicsService:CreateCollisionGroup(name)
+        end
+    end
+
+    local playerGroup = self.PlayerCollisionGroup or PLAYER_COLLISION_GROUP
+    local enemyGroup = self.EnemyCollisionGroup or ENEMY_COLLISION_GROUP
+
+    ensure(playerGroup)
+    ensure(enemyGroup)
+
+    if playerGroup and enemyGroup then
+        PhysicsService:CollisionGroupSetCollidable(playerGroup, enemyGroup, false)
+    end
+end
+
+function GameStateService:ApplyCharacterCollisionGroup(character: Model)
+    if not character then
+        return
+    end
+
+    local groupName = self.PlayerCollisionGroup or PLAYER_COLLISION_GROUP
+    if typeof(groupName) ~= "string" or groupName == "" then
+        return
+    end
+
+    for _, descendant in ipairs(character:GetDescendants()) do
+        if descendant:IsA("BasePart") then
+            PhysicsService:SetPartCollisionGroup(descendant, groupName)
+        end
+    end
+
+    character.DescendantAdded:Connect(function(descendant)
+        if descendant:IsA("BasePart") then
+            PhysicsService:SetPartCollisionGroup(descendant, groupName)
+        end
+    end)
+end
+
+function GameStateService:OnCharacterAdded(_player: Player, character: Model)
+    if not character then
+        return
+    end
+
+    self:ApplyCharacterCollisionGroup(character)
+
+    task.defer(function()
+        self:TeleportCharacterToSpawn(character)
+    end)
 end
 
 function GameStateService:TeleportCharacterToSpawn(character: Model)

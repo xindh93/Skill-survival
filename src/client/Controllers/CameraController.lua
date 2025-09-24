@@ -14,9 +14,9 @@ function CameraController:KnitInit()
     self.BaseYaw = math.rad(45)
     self.MinYaw = math.rad(30)
     self.MaxYaw = math.rad(60)
-    self.BasePitch = math.rad(35)
-    self.MinPitch = math.rad(25)
-    self.MaxPitch = math.rad(45)
+    self.BasePitch = math.rad(42)
+    self.MinPitch = math.rad(32)
+    self.MaxPitch = math.rad(55)
     self.TargetYaw = self.BaseYaw
     self.CurrentYaw = self.BaseYaw
     self.TargetPitch = self.BasePitch
