@@ -24,6 +24,88 @@ local function createTextLabel(parent: Instance, text: string, font: Enum.Font, 
     return label
 end
 
+local function createCooldownSlot(parent: Instance, props)
+    local size = props.Size or 72
+    local container = Instance.new("Frame")
+    container.Name = props.Name or "CooldownSlot"
+    container.BackgroundTransparency = 1
+    container.Size = UDim2.new(0, size, 0, size)
+    container.LayoutOrder = props.LayoutOrder or 0
+    container.Parent = parent
+
+    local slot = Instance.new("Frame")
+    slot.Name = "Slot"
+    slot.BackgroundTransparency = 1
+    slot.Size = UDim2.fromScale(1, 1)
+    slot.Parent = container
+
+    local gauge = Instance.new("Frame")
+    gauge.Name = "Gauge"
+    gauge.Size = UDim2.fromScale(1, 1)
+    gauge.BackgroundColor3 = props.BackgroundColor or Color3.fromRGB(18, 24, 32)
+    gauge.BackgroundTransparency = props.BackgroundTransparency or 0.25
+    gauge.BorderSizePixel = 0
+    gauge.Parent = slot
+
+    local gaugeCorner = Instance.new("UICorner")
+    gaugeCorner.CornerRadius = UDim.new(1, 0)
+    gaugeCorner.Parent = gauge
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Thickness = props.StrokeThickness or 2
+    stroke.Color = props.StrokeColor or Color3.fromRGB(120, 200, 255)
+    stroke.Transparency = props.StrokeTransparency or 0.2
+    stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    stroke.Parent = gauge
+
+    local mask = Instance.new("Frame")
+    mask.Name = "Mask"
+    mask.BackgroundTransparency = 1
+    mask.Size = UDim2.fromScale(1, 1)
+    mask.ClipsDescendants = true
+    mask.Parent = gauge
+
+    local maskCorner = Instance.new("UICorner")
+    maskCorner.CornerRadius = UDim.new(1, 0)
+    maskCorner.Parent = mask
+
+    local fill = Instance.new("Frame")
+    fill.Name = "Fill"
+    fill.BorderSizePixel = 0
+    fill.BackgroundColor3 = props.FillColor or Color3.fromRGB(120, 200, 255)
+    fill.BackgroundTransparency = props.FillTransparency or 0.15
+    fill.AnchorPoint = Vector2.new(0, 1)
+    fill.Position = UDim2.new(0, 0, 1, 0)
+    fill.Size = UDim2.new(1, 0, 1, 0)
+    fill.Parent = mask
+
+    local fillCorner = Instance.new("UICorner")
+    fillCorner.CornerRadius = UDim.new(1, 0)
+    fillCorner.Parent = fill
+
+    local boldFont = props.BoldFont or Enum.Font.GothamBold
+    local textSize = props.TextSize or 16
+
+    local keyLabel = createTextLabel(gauge, props.KeyText or "", boldFont, textSize, Enum.TextXAlignment.Center)
+    keyLabel.AnchorPoint = Vector2.new(0.5, 0.5)
+    keyLabel.Position = UDim2.new(0.5, 0, props.KeyLabelY or 0.32, 0)
+    keyLabel.TextScaled = true
+
+    local cooldownLabel = createTextLabel(gauge, props.ReadyText or "Ready", boldFont, textSize, Enum.TextXAlignment.Center)
+    cooldownLabel.AnchorPoint = Vector2.new(0.5, 0.5)
+    cooldownLabel.Position = UDim2.new(0.5, 0, props.CooldownLabelY or 0.72, 0)
+    cooldownLabel.TextScaled = true
+    cooldownLabel.TextColor3 = props.ReadyColor or Color3.fromRGB(180, 255, 205)
+
+    return {
+        Container = container,
+        Gauge = gauge,
+        Fill = fill,
+        CooldownLabel = cooldownLabel,
+        KeyLabel = keyLabel,
+    }
+end
+
 function HUDController:KnitInit()
     self.Elements = {}
     self.PartyEntries = {}
@@ -79,12 +161,11 @@ function HUDController:CreateInterface(playerGui: PlayerGui)
     local abilityWidth = abilityConfig.Width or 260
     local abilityHeight = abilityConfig.Height or 90
     local abilitySpacing = abilityConfig.Spacing or 12
-    local abilitySkillWidth = abilityConfig.SkillWidth or 150
-    local abilitySkillHeight = abilityConfig.SkillHeight or 36
     local abilityBottomOffset = abilityConfig.BottomOffset or 0
+    local skillSlotSize = abilityConfig.SkillSize or dashSize
 
-    abilityWidth = math.max(abilityWidth, abilitySkillWidth + abilitySpacing + dashSize)
-    abilityHeight = math.max(abilityHeight, dashSize)
+    abilityWidth = math.max(abilityWidth, skillSlotSize + abilitySpacing + dashSize)
+    abilityHeight = math.max(abilityHeight, math.max(skillSlotSize, dashSize))
 
     local reservedBottom = math.max(0, abilityHeight + abilityBottomOffset + sectionSpacing)
 
@@ -294,97 +375,79 @@ function HUDController:CreateInterface(playerGui: PlayerGui)
     abilityFrame.Size = UDim2.new(0, abilityWidth, 0, abilityHeight)
     abilityFrame.Parent = safeFrame
 
-    local skillLabel = createTextLabel(abilityFrame, "", boldFont, abilityConfig.SkillTextSize or infoTextSize, Enum.TextXAlignment.Left)
-    skillLabel.Size = UDim2.new(0, abilitySkillWidth, 0, abilitySkillHeight)
-    skillLabel.Position = UDim2.new(0, 0, 0, math.max(0, math.floor((abilityHeight - abilitySkillHeight) / 2)))
-    skillLabel.TextScaled = false
-    skillLabel.TextWrapped = true
+    local abilityLayout = Instance.new("UIListLayout")
+    abilityLayout.FillDirection = Enum.FillDirection.Horizontal
+    abilityLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    abilityLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
+    abilityLayout.VerticalAlignment = Enum.VerticalAlignment.Bottom
+    abilityLayout.Padding = UDim.new(0, abilitySpacing)
+    abilityLayout.Parent = abilityFrame
 
-    local dashContainer = Instance.new("Frame")
-    dashContainer.Name = "DashContainer"
-    dashContainer.BackgroundTransparency = 1
-    dashContainer.Size = UDim2.new(0, dashSize, 0, dashSize)
-    dashContainer.Position = UDim2.new(0, abilitySkillWidth + abilitySpacing, 0, math.max(0, math.floor((abilityHeight - dashSize) / 2)))
-    dashContainer.Parent = abilityFrame
+    local skillSlot = createCooldownSlot(abilityFrame, {
+        Name = "SkillSlot",
+        Size = skillSlotSize,
+        BoldFont = boldFont,
+        TextSize = abilityConfig.SkillTextSize or infoTextSize,
+        KeyText = abilityConfig.SkillKey or "Q",
+        ReadyText = abilityConfig.SkillReadyText or "Ready",
+        ReadyColor = abilityConfig.SkillReadyColor or Color3.fromRGB(255, 235, 200),
+        BackgroundColor = abilityConfig.SkillBackgroundColor or Color3.fromRGB(18, 24, 32),
+        BackgroundTransparency = abilityConfig.SkillBackgroundTransparency or 0.25,
+        FillColor = abilityConfig.SkillFillColor or Color3.fromRGB(255, 196, 110),
+        FillTransparency = abilityConfig.SkillFillTransparency or 0.15,
+        StrokeColor = abilityConfig.SkillStrokeColor or Color3.fromRGB(255, 196, 110),
+        StrokeThickness = abilityConfig.SkillStrokeThickness or 2,
+        StrokeTransparency = abilityConfig.SkillStrokeTransparency or 0.2,
+        LayoutOrder = 1,
+        KeyLabelY = abilityConfig.SkillKeyLabelY or 0.32,
+        CooldownLabelY = abilityConfig.SkillCooldownLabelY or 0.72,
+    })
 
-    local dashSlot = Instance.new("Frame")
-    dashSlot.Name = "DashSlot"
-    dashSlot.BackgroundTransparency = 1
-    dashSlot.Size = UDim2.fromScale(1, 1)
-    dashSlot.Parent = dashContainer
-
-    local dashGauge = Instance.new("Frame")
-    dashGauge.Name = "Gauge"
-    dashGauge.Size = UDim2.fromScale(1, 1)
-    dashGauge.BackgroundColor3 = dashConfig.BackgroundColor or Color3.fromRGB(18, 24, 32)
-    dashGauge.BackgroundTransparency = dashConfig.BackgroundTransparency or 0.25
-    dashGauge.BorderSizePixel = 0
-    dashGauge.Parent = dashSlot
-
-    local dashCorner = Instance.new("UICorner")
-    dashCorner.CornerRadius = UDim.new(1, 0)
-    dashCorner.Parent = dashGauge
-
-    local dashStroke = Instance.new("UIStroke")
-    dashStroke.Thickness = dashConfig.StrokeThickness or 2
-    dashStroke.Color = dashConfig.StrokeColor or Color3.fromRGB(120, 200, 255)
-    dashStroke.Transparency = dashConfig.StrokeTransparency or 0.2
-    dashStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    dashStroke.Parent = dashGauge
-
-    local dashMask = Instance.new("Frame")
-    dashMask.Name = "Mask"
-    dashMask.BackgroundTransparency = 1
-    dashMask.Size = UDim2.fromScale(1, 1)
-    dashMask.ClipsDescendants = true
-    dashMask.Parent = dashGauge
-
-    local dashMaskCorner = Instance.new("UICorner")
-    dashMaskCorner.CornerRadius = UDim.new(1, 0)
-    dashMaskCorner.Parent = dashMask
-
-    local dashFill = Instance.new("Frame")
-    dashFill.Name = "Fill"
-    dashFill.BorderSizePixel = 0
-    dashFill.BackgroundColor3 = dashConfig.FillColor or Color3.fromRGB(120, 200, 255)
-    dashFill.BackgroundTransparency = dashConfig.FillTransparency or 0.15
-    dashFill.AnchorPoint = Vector2.new(0, 1)
-    dashFill.Position = UDim2.new(0, 0, 1, 0)
-    dashFill.Size = UDim2.new(1, 0, 0, 0)
-    dashFill.Parent = dashMask
-
-    local dashFillCorner = Instance.new("UICorner")
-    dashFillCorner.CornerRadius = UDim.new(1, 0)
-    dashFillCorner.Parent = dashFill
-
-    local dashKeyLabel = createTextLabel(dashGauge, dashConfig.KeyText or "E", boldFont, smallTextSize, Enum.TextXAlignment.Center)
-    dashKeyLabel.AnchorPoint = Vector2.new(0.5, 0.5)
-    dashKeyLabel.Position = UDim2.new(0.5, 0, 0.3, 0)
-    dashKeyLabel.TextScaled = true
-
-    local dashCooldownLabel = createTextLabel(dashGauge, dashConfig.ReadyText or "Ready", boldFont, smallTextSize, Enum.TextXAlignment.Center)
-    dashCooldownLabel.AnchorPoint = Vector2.new(0.5, 0.5)
-    dashCooldownLabel.Position = UDim2.new(0.5, 0, 0.72, 0)
-    dashCooldownLabel.TextScaled = true
-    dashCooldownLabel.TextColor3 = dashConfig.ReadyColor or Color3.fromRGB(180, 255, 205)
+    local dashSlot = createCooldownSlot(abilityFrame, {
+        Name = "DashSlot",
+        Size = dashSize,
+        BoldFont = boldFont,
+        TextSize = smallTextSize,
+        KeyText = dashConfig.KeyText or "E",
+        ReadyText = dashConfig.ReadyText or "Ready",
+        ReadyColor = dashConfig.ReadyColor or Color3.fromRGB(180, 255, 205),
+        BackgroundColor = dashConfig.BackgroundColor or Color3.fromRGB(18, 24, 32),
+        BackgroundTransparency = dashConfig.BackgroundTransparency or 0.25,
+        FillColor = dashConfig.FillColor or Color3.fromRGB(120, 200, 255),
+        FillTransparency = dashConfig.FillTransparency or 0.15,
+        StrokeColor = dashConfig.StrokeColor or Color3.fromRGB(120, 200, 255),
+        StrokeThickness = dashConfig.StrokeThickness or 2,
+        StrokeTransparency = dashConfig.StrokeTransparency or 0.2,
+        LayoutOrder = 2,
+        KeyLabelY = dashConfig.KeyLabelY or 0.32,
+        CooldownLabelY = dashConfig.CooldownLabelY or 0.72,
+    })
 
     self.Screen = screen
     self.SkillDisplayKey = abilityConfig.SkillKey or "Q"
     self.SkillReadyText = abilityConfig.SkillReadyText or "Ready"
+    self.SkillReadyColor = abilityConfig.SkillReadyColor or Color3.fromRGB(255, 235, 200)
     self.PrimarySkillId = abilityConfig.PrimarySkillId or "AOE_Blast"
     self.DashReadyText = dashConfig.ReadyText or "Ready"
     self.DashReadyColor = dashConfig.ReadyColor or Color3.fromRGB(180, 255, 205)
 
-    skillLabel.Text = string.format("%s: %s", self.SkillDisplayKey, self.SkillReadyText)
+    skillSlot.KeyLabel.Text = self.SkillDisplayKey
+    skillSlot.CooldownLabel.Text = self.SkillReadyText
+    skillSlot.CooldownLabel.TextColor3 = self.SkillReadyColor
+    dashSlot.KeyLabel.Text = dashConfig.KeyText or "E"
+    dashSlot.CooldownLabel.Text = self.DashReadyText
+    dashSlot.CooldownLabel.TextColor3 = self.DashReadyColor
 
     self.Elements = {
         WaveLabel = waveLabel,
         EnemyLabel = enemyLabel,
         TimerLabel = timerLabel,
         GoldLabel = goldLabel,
-        SkillLabel = skillLabel,
-        DashFill = dashFill,
-        DashCooldownLabel = dashCooldownLabel,
+        SkillFill = skillSlot.Fill,
+        SkillCooldownLabel = skillSlot.CooldownLabel,
+        SkillKeyLabel = skillSlot.KeyLabel,
+        DashFill = dashSlot.Fill,
+        DashCooldownLabel = dashSlot.CooldownLabel,
         MessageLabel = messageLabel,
         WaveAnnouncement = waveAnnouncement,
         ReservedAlert = reservedAlert,
@@ -515,9 +578,15 @@ function HUDController:UpdateXP(state)
 end
 
 function HUDController:UpdateSkillCooldowns(skillTable)
-    local skillLabel = self.Elements.SkillLabel
-    if not skillLabel then
+    local skillFill = self.Elements.SkillFill
+    local cooldownLabel = self.Elements.SkillCooldownLabel
+    local keyLabel = self.Elements.SkillKeyLabel
+    if not skillFill or not cooldownLabel then
         return
+    end
+
+    if keyLabel then
+        keyLabel.Text = self.SkillDisplayKey or "Q"
     end
 
     local primaryId = self.PrimarySkillId
@@ -545,16 +614,20 @@ function HUDController:UpdateSkillCooldowns(skillTable)
         end
     end
 
-    local keyText = self.SkillDisplayKey or "Q"
     local readyText = self.SkillReadyText or "Ready"
+    local readyColor = self.SkillReadyColor or Color3.fromRGB(255, 235, 200)
+
+    local cooldown = 0
+    local remaining = 0
 
     if info and typeof(info) == "table" then
-        local cooldown = 0
-        local remaining
         if typeof(info.Cooldown) == "number" then
             cooldown = math.max(0, info.Cooldown)
         end
-        if typeof(info.Remaining) == "number" then
+        if typeof(info.ReadyTime) == "number" then
+            local now = Workspace:GetServerTimeNow()
+            remaining = math.max(0, info.ReadyTime - now)
+        elseif typeof(info.Remaining) == "number" then
             remaining = math.max(0, info.Remaining)
         elseif typeof(info.Timestamp) == "number" then
             local now = Workspace:GetServerTimeNow()
@@ -566,14 +639,26 @@ function HUDController:UpdateSkillCooldowns(skillTable)
                 remaining = math.max(0, cooldown - elapsed)
             end
         end
-
-        if remaining and remaining > 0.05 then
-            skillLabel.Text = string.format("%s: %.1fs", keyText, remaining)
-            return
-        end
     end
 
-    skillLabel.Text = string.format("%s: %s", keyText, readyText)
+    local progress
+    if cooldown > 0 then
+        progress = 1 - math.clamp(remaining / cooldown, 0, 1)
+    elseif remaining > 0 then
+        progress = 0
+    else
+        progress = 1
+    end
+
+    skillFill.Size = UDim2.new(1, 0, progress, 0)
+
+    if remaining > 0.05 then
+        cooldownLabel.Text = string.format("%.1f", remaining)
+        cooldownLabel.TextColor3 = Color3.new(1, 1, 1)
+    else
+        cooldownLabel.Text = readyText
+        cooldownLabel.TextColor3 = readyColor
+    end
 end
 
 function HUDController:UpdateDashCooldown(dashData)
@@ -587,11 +672,14 @@ function HUDController:UpdateDashCooldown(dashData)
     local cooldown = 0
 
     if typeof(dashData) == "table" then
-        if typeof(dashData.Remaining) == "number" then
-            remaining = math.max(0, dashData.Remaining)
-        end
         if typeof(dashData.Cooldown) == "number" then
             cooldown = math.max(0, dashData.Cooldown)
+        end
+        if typeof(dashData.ReadyTime) == "number" then
+            local now = Workspace:GetServerTimeNow()
+            remaining = math.max(0, dashData.ReadyTime - now)
+        elseif typeof(dashData.Remaining) == "number" then
+            remaining = math.max(0, dashData.Remaining)
         end
     end
 
@@ -823,36 +911,6 @@ function HUDController:PlayWaveAnnouncement(wave: number)
     task.spawn(function()
         task.wait(1.2)
         label.TextTransparency = 1
-    end)
-end
-
-function HUDController:ShowAOE(position: Vector3, radius: number)
-    if typeof(position) ~= "Vector3" then
-        return
-    end
-
-    radius = typeof(radius) == "number" and radius or 0
-    if radius <= 0 then
-        return
-    end
-
-    local ring = Instance.new("Part")
-    ring.Shape = Enum.PartType.Cylinder
-    ring.Material = Enum.Material.Neon
-    ring.Color = Color3.fromRGB(120, 200, 255)
-    ring.Transparency = 0.4
-    ring.Anchored = true
-    ring.CanCollide = false
-    ring.Size = Vector3.new(radius * 2, 0.25, radius * 2)
-    ring.CFrame = CFrame.new(position) * CFrame.Angles(math.rad(90), 0, 0)
-    ring.Parent = Workspace
-
-    task.spawn(function()
-        for _ = 1, 10 do
-            ring.Transparency += 0.06
-            task.wait(0.05)
-        end
-        ring:Destroy()
     end)
 end
 
