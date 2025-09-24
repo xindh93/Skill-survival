@@ -36,10 +36,10 @@ local DashService = Knit.CreateService({
 })
 
 function DashService:KnitInit()
-    self.LastDash = {} :: {[Player]: number}
     self.ActiveDashes = {} :: {[Player]: DashState}
     self.CooldownThreads = {} :: {[Player]: thread}
     self.IFrameTokens = {} :: {[Model]: {}?}
+    self.LastDashReadyTime = {} :: {[Player]: number}
 
 end
 
@@ -102,7 +102,7 @@ function DashService:_bindCharacter(player: Player)
 end
 
 function DashService:CleanupPlayer(player: Player)
-    self.LastDash[player] = nil
+    self.LastDashReadyTime[player] = nil
     self:StopCooldownBroadcast(player)
     local dash = self.ActiveDashes[player]
     if dash then
@@ -116,12 +116,12 @@ function DashService:HandleDashRequest(player: Player, rawDirection)
     end
 
     local dashConfig = getDashConfig()
-    local now = os.clock()
-    local last = self.LastDash[player]
-    if last then
-        local remaining = dashConfig.Cooldown - (now - last)
+    local serverNow = Workspace:GetServerTimeNow()
+    local readyAt = self.LastDashReadyTime[player]
+    if typeof(readyAt) == "number" then
+        local remaining = readyAt - serverNow
         if remaining > 0 then
-            self:SendCooldownUpdate(player, dashConfig.Cooldown, math.max(0, remaining))
+            self:SendCooldownUpdate(player, dashConfig.Cooldown, remaining, readyAt)
             return
         end
     end
@@ -188,7 +188,9 @@ function DashService:HandleDashRequest(player: Player, rawDirection)
     end
 
     if dashDistance <= 0.5 then
-        self:SendCooldownUpdate(player, dashConfig.Cooldown, 0)
+        local readyNow = Workspace:GetServerTimeNow()
+        self.LastDashReadyTime[player] = readyNow
+        self:SendCooldownUpdate(player, dashConfig.Cooldown, 0, readyNow)
         return
     end
 
@@ -218,7 +220,8 @@ function DashService:HandleDashRequest(player: Player, rawDirection)
     }
 
     self.ActiveDashes[player] = dash
-    self.LastDash[player] = startTime
+    local nextReadyTime = Workspace:GetServerTimeNow() + dashConfig.Cooldown
+    self.LastDashReadyTime[player] = nextReadyTime
 
     humanoid.AutoRotate = false
     root.CustomPhysicalProperties = PhysicalProperties.new(0, 0, 0, 0, 0)
@@ -226,7 +229,7 @@ function DashService:HandleDashRequest(player: Player, rawDirection)
     self:ScheduleIFrameClear(character, dashConfig.IFrame)
 
     Net:FireAll("DashReplicate", player, startPos, targetPos, duration)
-    self:StartCooldownBroadcast(player, dashConfig.Cooldown)
+    self:StartCooldownBroadcast(player, dashConfig.Cooldown, nextReadyTime)
 end
 
 function DashService:ResolveDirection(rawDirection, humanoid: Humanoid, root: BasePart): Vector3?
@@ -262,13 +265,18 @@ function DashService:SnapToGround(character: Model, root: BasePart, targetPos: V
     params.FilterDescendantsInstances = {character}
 
     local halfHeight = root.Size.Y * 0.5
+    local startY = root.Position.Y
     local origin = targetPos + Vector3.new(0, halfHeight + 6, 0)
     local result = Workspace:Raycast(origin, Vector3.new(0, -(halfHeight + 12), 0), params)
     if result then
-        return Vector3.new(targetPos.X, result.Position.Y + halfHeight, targetPos.Z)
+        local groundY = result.Position.Y + halfHeight
+        if groundY < startY then
+            groundY = startY
+        end
+        return Vector3.new(targetPos.X, groundY, targetPos.Z)
     end
 
-    return Vector3.new(targetPos.X, root.Position.Y, targetPos.Z)
+    return Vector3.new(targetPos.X, startY, targetPos.Z)
 end
 
 function DashService:ScheduleIFrameClear(character: Model, duration: number)
@@ -358,21 +366,26 @@ function DashService:FinishDash(player: Player, snapToEnd: boolean)
     end
 end
 
-function DashService:StartCooldownBroadcast(player: Player, cooldown: number)
+function DashService:StartCooldownBroadcast(player: Player, cooldown: number, readyTime: number?)
     self:StopCooldownBroadcast(player)
 
     if cooldown <= 0 then
-        self:SendCooldownUpdate(player, 0, 0)
+        local now = Workspace:GetServerTimeNow()
+        self:SendCooldownUpdate(player, 0, 0, now)
         return
     end
 
-    local startTime = os.clock()
+    local targetReady = readyTime
+    if typeof(targetReady) ~= "number" then
+        targetReady = Workspace:GetServerTimeNow() + cooldown
+    end
+
     local thread: thread
     thread = task.spawn(function()
         while self.CooldownThreads[player] == thread do
-            local elapsed = os.clock() - startTime
-            local remaining = math.max(0, cooldown - elapsed)
-            self:SendCooldownUpdate(player, cooldown, remaining)
+            local now = Workspace:GetServerTimeNow()
+            local remaining = math.max(0, targetReady - now)
+            self:SendCooldownUpdate(player, cooldown, remaining, targetReady)
             if remaining <= 0 then
                 break
             end
@@ -394,10 +407,17 @@ function DashService:StopCooldownBroadcast(player: Player)
     end
 end
 
-function DashService:SendCooldownUpdate(player: Player, cooldown: number, remaining: number)
+function DashService:SendCooldownUpdate(player: Player, cooldown: number, remaining: number, readyTime: number?)
+    remaining = math.max(0, remaining)
+    local readyAt = readyTime
+    if typeof(readyAt) ~= "number" then
+        readyAt = Workspace:GetServerTimeNow() + remaining
+    end
+
     Net:FireClient(player, "DashCooldown", {
         Cooldown = cooldown,
-        Remaining = math.max(0, remaining),
+        Remaining = remaining,
+        ReadyTime = readyAt,
     })
 end
 

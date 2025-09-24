@@ -147,11 +147,14 @@ function CombatService:HandleSkill(player: Player, skillId: string, payload)
     end
 
     self:SetSkillUsed(player, skillId)
+    local serverNow = Workspace:GetServerTimeNow()
     Net:FireClient(player, "HUD", {
         SkillCooldowns = {
             [skillId] = {
                 Cooldown = cooldown,
-                Timestamp = Workspace:GetServerTimeNow(),
+                Timestamp = serverNow,
+                ReadyTime = serverNow + cooldown,
+                Remaining = cooldown,
             },
         },
     })

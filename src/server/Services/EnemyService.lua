@@ -1,10 +1,34 @@
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local PhysicsService = game:GetService("PhysicsService")
 
 local Knit = require(ReplicatedStorage.Shared.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Net = require(ReplicatedStorage.Shared.Net)
+
+local PLAYER_COLLISION_GROUP = "SkillSurvivalPlayers"
+local ENEMY_COLLISION_GROUP = "SkillSurvivalEnemies"
+
+local function applyCollisionGroup(instance: Instance, groupName: string)
+    if typeof(groupName) ~= "string" or groupName == "" then
+        return
+    end
+
+    for _, descendant in ipairs(instance:GetDescendants()) do
+        if descendant:IsA("BasePart") then
+            PhysicsService:SetPartCollisionGroup(descendant, groupName)
+        end
+    end
+
+    if instance:IsA("Model") then
+        instance.DescendantAdded:Connect(function(descendant)
+            if descendant:IsA("BasePart") then
+                PhysicsService:SetPartCollisionGroup(descendant, groupName)
+            end
+        end)
+    end
+end
 
 local EnemyService = Knit.CreateService({
     Name = "EnemyService",
@@ -19,6 +43,60 @@ function EnemyService:KnitInit()
     self.MatchActive = false
     self.WaveCleared = Knit.Util.Signal.new()
     self.EnemyCountChanged = Knit.Util.Signal.new()
+    self.CollisionGroups = {
+        Player = PLAYER_COLLISION_GROUP,
+        Enemy = ENEMY_COLLISION_GROUP,
+    }
+    self:EnsureCollisionGroups()
+end
+
+function EnemyService:EnsureCollisionGroups()
+    local function ensure(name: string)
+        if typeof(name) ~= "string" or name == "" then
+            return
+        end
+
+        local exists = pcall(function()
+            PhysicsService:GetCollisionGroupId(name)
+        end)
+        if not exists then
+            PhysicsService:CreateCollisionGroup(name)
+        end
+    end
+
+    local playerGroup = self:GetPlayerCollisionGroup()
+    local enemyGroup = self:GetEnemyCollisionGroup()
+
+    ensure(playerGroup)
+    ensure(enemyGroup)
+
+    if playerGroup and enemyGroup then
+        PhysicsService:CollisionGroupSetCollidable(playerGroup, enemyGroup, false)
+    end
+end
+
+function EnemyService:GetPlayerCollisionGroup(): string
+    local groups = self.CollisionGroups
+    if groups and typeof(groups.Player) == "string" and groups.Player ~= "" then
+        return groups.Player
+    end
+    return PLAYER_COLLISION_GROUP
+end
+
+function EnemyService:GetEnemyCollisionGroup(): string
+    local groups = self.CollisionGroups
+    if groups and typeof(groups.Enemy) == "string" and groups.Enemy ~= "" then
+        return groups.Enemy
+    end
+    return ENEMY_COLLISION_GROUP
+end
+
+function EnemyService:ApplyEnemyCollisionGroup(model: Model)
+    if not model then
+        return
+    end
+
+    applyCollisionGroup(model, self:GetEnemyCollisionGroup())
 end
 
 function EnemyService:KnitStart()
@@ -178,6 +256,7 @@ function EnemyService:SpawnEnemy(spawnCFrame: CFrame, stats)
     local model = self:CreateEnemyModel(stats)
     model:SetPrimaryPartCFrame(spawnCFrame)
     model.Parent = self.EnemyFolder
+    self:ApplyEnemyCollisionGroup(model)
 
     local humanoid = model:FindFirstChildOfClass("Humanoid")
     if humanoid then
