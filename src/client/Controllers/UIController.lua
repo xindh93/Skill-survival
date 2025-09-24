@@ -18,6 +18,7 @@ function UIController:KnitInit()
         Wave = 0,
         RemainingEnemies = 0,
         TimeRemaining = -1,
+        Countdown = 0,
         Gold = 0,
         XP = 0,
         Level = 1,
@@ -30,6 +31,10 @@ function UIController:KnitInit()
         },
         Party = {},
     }
+    self.Options = {ShowNameplates = false}
+    self.MatchEndTime = nil
+    self.CountdownEndTime = nil
+    self.EstimatedEnemyCount = 0
 end
 
 function UIController:KnitStart()
@@ -71,44 +76,89 @@ function UIController:KnitStart()
         self:OnPartyUpdate(partyData)
     end)
 
+    Net:GetEvent("EnemySpawned").OnClientEvent:Connect(function()
+        self:OnEnemyCountDelta(1)
+    end)
+
+    Net:GetEvent("EnemyRemoved").OnClientEvent:Connect(function()
+        self:OnEnemyCountDelta(-1)
+    end)
+
     RunService.RenderStepped:Connect(function()
         if not self.HUD then
             return
         end
 
         local now = Workspace:GetServerTimeNow()
-        local hasActive = false
-        local toClear = nil
         local needsUpdate = false
+        local hasActiveSkill = false
+        local toClear = nil
 
         local dash = self.State.DashCooldown
-        if dash then
-            if dash.ReadyTime and dash.ReadyTime > 0 then
-                local newRemaining = math.max(0, dash.ReadyTime - now)
-                if dash.Remaining == nil or math.abs(newRemaining - dash.Remaining) > 0.01 then
-                    dash.Remaining = newRemaining
-                    needsUpdate = true
-                else
-                    dash.Remaining = newRemaining
-                end
+        if dash and dash.ReadyTime and dash.ReadyTime > 0 then
+            local newRemaining = math.max(0, dash.ReadyTime - now)
+            if dash.Remaining == nil or math.abs(newRemaining - dash.Remaining) > 0.01 or newRemaining <= 0.05 then
+                dash.Remaining = newRemaining
+                needsUpdate = true
+            else
+                dash.Remaining = newRemaining
             end
         end
 
         for skillId, info in pairs(self.State.SkillCooldowns) do
-            local cooldown = info.Cooldown or 0
-            local timestamp = info.Timestamp
+            local cooldown = info and info.Cooldown or 0
+            local timestamp = info and info.Timestamp
 
-            if not timestamp or cooldown <= 0 then
+            if typeof(timestamp) ~= "number" or cooldown <= 0 then
                 toClear = toClear or {}
                 table.insert(toClear, skillId)
             else
-                local elapsed = now - timestamp
-                if elapsed >= cooldown then
+                local endTime = info.EndTime
+                if typeof(endTime) ~= "number" then
+                    endTime = timestamp + cooldown
+                    info.EndTime = endTime
+                end
+
+                local remaining = endTime - now
+                if remaining <= 0 then
                     toClear = toClear or {}
                     table.insert(toClear, skillId)
+                    needsUpdate = true
                 else
-                    hasActive = true
+                    hasActiveSkill = true
+                    if info.Remaining == nil or math.abs(remaining - info.Remaining) > 0.05 then
+                        info.Remaining = remaining
+                        needsUpdate = true
+                    else
+                        info.Remaining = remaining
+                    end
                 end
+            end
+        end
+
+        if self.CountdownEndTime and self.State.State == "Prepare" then
+            local newCountdown = math.max(0, self.CountdownEndTime - now)
+            if math.abs(newCountdown - (self.State.Countdown or 0)) > 0.05 then
+                self.State.Countdown = newCountdown
+                needsUpdate = true
+            else
+                self.State.Countdown = newCountdown
+            end
+            if newCountdown <= 0 then
+                self.CountdownEndTime = nil
+            end
+        end
+
+        if self.MatchEndTime and (self.State.TimeRemaining == nil or self.State.TimeRemaining >= 0) then
+            local newRemaining = math.max(0, self.MatchEndTime - now)
+            if math.abs(newRemaining - (self.State.TimeRemaining or 0)) > 0.05 then
+                self.State.TimeRemaining = newRemaining
+                needsUpdate = true
+            else
+                self.State.TimeRemaining = newRemaining
+            end
+            if newRemaining <= 0 then
+                self.MatchEndTime = nil
             end
         end
 
@@ -116,9 +166,10 @@ function UIController:KnitStart()
             for _, skillId in ipairs(toClear) do
                 self.State.SkillCooldowns[skillId] = nil
             end
+            needsUpdate = true
         end
 
-        if needsUpdate or hasActive or toClear then
+        if needsUpdate or hasActiveSkill then
             self.HUD:Update(self.State)
         end
     end)
@@ -127,10 +178,22 @@ function UIController:KnitStart()
 end
 
 function UIController:ApplyHUDUpdate(payload)
+    local now = Workspace:GetServerTimeNow()
+    local newState
+
     for key, value in pairs(payload) do
         if key == "SkillCooldowns" then
             for skillId, info in pairs(value) do
-                self.State.SkillCooldowns[skillId] = info
+                if typeof(info) == "table" then
+                    if typeof(info.Remaining) == "number" and info.Remaining > 0 then
+                        info.EndTime = now + info.Remaining
+                    else
+                        info.EndTime = nil
+                    end
+                    self.State.SkillCooldowns[skillId] = info
+                else
+                    self.State.SkillCooldowns[skillId] = nil
+                end
             end
         elseif key == "DashCooldown" then
             self:OnDashCooldown(value)
@@ -140,8 +203,63 @@ function UIController:ApplyHUDUpdate(payload)
             self.State.XPProgress = value
         elseif key == "Level" then
             self.State.Level = value
+        elseif key == "TimeRemaining" then
+            if typeof(value) == "number" then
+                if value >= 0 then
+                    local remainingValue = math.max(0, value)
+                    self.State.TimeRemaining = remainingValue
+                    self.MatchEndTime = now + remainingValue
+                else
+                    self.State.TimeRemaining = value
+                    self.MatchEndTime = nil
+                end
+            else
+                self.State.TimeRemaining = -1
+                self.MatchEndTime = nil
+            end
+        elseif key == "Countdown" then
+            if typeof(value) == "number" then
+                local countdownValue = math.max(0, value)
+                self.State.Countdown = countdownValue
+                if countdownValue > 0 then
+                    self.CountdownEndTime = now + countdownValue
+                else
+                    self.CountdownEndTime = nil
+                end
+            else
+                self.State.Countdown = 0
+                self.CountdownEndTime = nil
+            end
+        elseif key == "RemainingEnemies" then
+            self.State.RemainingEnemies = value
+            if typeof(value) == "number" then
+                self.EstimatedEnemyCount = math.max(0, value)
+            else
+                self.EstimatedEnemyCount = 0
+            end
+        elseif key == "State" then
+            newState = value
         else
             self.State[key] = value
+        end
+    end
+
+    if newState ~= nil then
+        self.State.State = newState
+        if newState == "Prepare" then
+            self.EstimatedEnemyCount = self.State.RemainingEnemies or 0
+        elseif newState == "Active" then
+            if typeof(self.State.RemainingEnemies) == "number" then
+                self.EstimatedEnemyCount = math.max(0, self.State.RemainingEnemies)
+            end
+        elseif newState == "Results" or newState == "Ended" or newState == "Idle" then
+            self.EstimatedEnemyCount = 0
+            self.MatchEndTime = nil
+        end
+
+        if newState ~= "Prepare" then
+            self.CountdownEndTime = nil
+            self.State.Countdown = 0
         end
     end
 
@@ -196,6 +314,38 @@ function UIController:OnPartyUpdate(partyData)
     else
         self.State.Party = partyData
     end
+
+    if self.HUD then
+        self.HUD:Update(self.State)
+    end
+end
+
+function UIController:OnEnemyCountDelta(delta)
+    if typeof(delta) ~= "number" or delta == 0 then
+        return
+    end
+
+    if self.State.State == "Results" or self.State.State == "Idle" then
+        self.EstimatedEnemyCount = 0
+        self.State.RemainingEnemies = 0
+        if self.HUD then
+            self.HUD:Update(self.State)
+        end
+        return
+    end
+
+    local count = self.EstimatedEnemyCount
+    if typeof(count) ~= "number" then
+        count = self.State.RemainingEnemies or 0
+    end
+
+    count = count + delta
+    if count < 0 then
+        count = 0
+    end
+
+    self.EstimatedEnemyCount = count
+    self.State.RemainingEnemies = count
 
     if self.HUD then
         self.HUD:Update(self.State)
