@@ -262,13 +262,18 @@ function DashService:SnapToGround(character: Model, root: BasePart, targetPos: V
     params.FilterDescendantsInstances = {character}
 
     local halfHeight = root.Size.Y * 0.5
+    local startY = root.Position.Y
     local origin = targetPos + Vector3.new(0, halfHeight + 6, 0)
     local result = Workspace:Raycast(origin, Vector3.new(0, -(halfHeight + 12), 0), params)
     if result then
-        return Vector3.new(targetPos.X, result.Position.Y + halfHeight, targetPos.Z)
+        local groundY = result.Position.Y + halfHeight
+        if groundY < startY then
+            groundY = startY
+        end
+        return Vector3.new(targetPos.X, groundY, targetPos.Z)
     end
 
-    return Vector3.new(targetPos.X, root.Position.Y, targetPos.Z)
+    return Vector3.new(targetPos.X, startY, targetPos.Z)
 end
 
 function DashService:ScheduleIFrameClear(character: Model, duration: number)
