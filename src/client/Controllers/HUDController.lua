@@ -1,6 +1,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
+local TweenService = game:GetService("TweenService")
 
 local Knit = require(ReplicatedStorage.Shared.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
@@ -912,6 +913,67 @@ function HUDController:PlayWaveAnnouncement(wave: number)
         task.wait(1.2)
         label.TextTransparency = 1
     end)
+end
+
+
+function HUDController:ShowAOE(position: Vector3, radius: number)
+    if typeof(position) ~= "Vector3" then
+        return
+    end
+
+    radius = typeof(radius) == "number" and radius or 0
+    if radius <= 0 then
+        return
+    end
+
+    local ignore = {}
+    local player = Players.LocalPlayer
+    if player and player.Character then
+        table.insert(ignore, player.Character)
+    end
+
+    local params = RaycastParams.new()
+    params.FilterType = Enum.RaycastFilterType.Exclude
+    params.IgnoreWater = true
+    if #ignore > 0 then
+        params.FilterDescendantsInstances = ignore
+    end
+
+    local origin = position + Vector3.new(0, 40, 0)
+    local rayResult = Workspace:Raycast(origin, Vector3.new(0, -160, 0), params)
+    local groundPosition
+    if rayResult then
+        groundPosition = Vector3.new(position.X, rayResult.Position.Y + 0.1, position.Z)
+    else
+        groundPosition = Vector3.new(position.X, position.Y, position.Z)
+    end
+
+    local ring = Instance.new("Part")
+    ring.Shape = Enum.PartType.Cylinder
+    ring.Material = Enum.Material.Neon
+    ring.Color = Color3.fromRGB(120, 200, 255)
+    ring.Transparency = 0.2
+    ring.Anchored = true
+    ring.CanCollide = false
+    ring.CanQuery = false
+    ring.CanTouch = false
+    ring.TopSurface = Enum.SurfaceType.Smooth
+    ring.BottomSurface = Enum.SurfaceType.Smooth
+    local height = math.max(0.35, radius * 0.08)
+    ring.Size = Vector3.new(radius * 2, height, radius * 2)
+    ring.CFrame = CFrame.new(groundPosition) * CFrame.Angles(math.rad(90), 0, 0)
+    ring.Parent = Workspace
+
+    local tween = TweenService:Create(ring, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+        Transparency = 1,
+        Size = Vector3.new(radius * 2.4, height * 0.6, radius * 2.4),
+    })
+
+    tween.Completed:Connect(function()
+        ring:Destroy()
+    end)
+
+    tween:Play()
 end
 
 return HUDController

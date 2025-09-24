@@ -195,7 +195,12 @@ function DashService:HandleDashRequest(player: Player, rawDirection)
     local targetPos = startPos + direction * dashDistance
     targetPos = Vector3.new(targetPos.X, startPos.Y, targetPos.Z)
 
+
     targetPos = self:SnapToGround(character, root, targetPos)
+
+
+    targetPos = self:SnapToGround(character, root, targetPos)
+
 
     local startTime = os.clock()
     local duration = math.max(0.05, dashConfig.Duration)
