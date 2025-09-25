@@ -154,6 +154,7 @@ function HUDController:KnitStart()
     local existing = playerGui:FindFirstChild("SkillSurvivalHUD")
     if existing then
         tryAttach(existing)
+
     end
 
     playerGui.ChildAdded:Connect(function(child)
@@ -211,6 +212,35 @@ function HUDController:OnInterfaceReady(callback)
     if self.Screen then
         task.defer(callback, self.Screen)
     end
+
+
+    end
+
+    playerGui.ChildAdded:Connect(function(child)
+        if child.Name == "SkillSurvivalHUD" then
+            task.defer(tryAttach, child)
+        end
+    end)
+end
+
+function HUDController:KnitShutdown()
+    if self.InterfaceSignal then
+        self.InterfaceSignal:Destroy()
+        self.InterfaceSignal = nil
+    end
+    self.Screen = nil
+    self.Elements = {}
+end
+
+function HUDController:OnInterfaceReady(callback)
+    if typeof(callback) ~= "function" then
+        return nil
+    end
+
+    if self.Screen then
+        task.defer(callback, self.Screen)
+    end
+
 
     return self.InterfaceSignal.Event:Connect(callback)
 end
@@ -567,7 +597,9 @@ function HUDController:UseExistingInterface(screen: ScreenGui)
         return
     end
 
+
     screen.Enabled = true
+
     screen.ResetOnSpawn = false
     screen.IgnoreGuiInset = false
     screen.DisplayOrder = (uiConfig.DisplayOrder and uiConfig.DisplayOrder.HUD) or 0

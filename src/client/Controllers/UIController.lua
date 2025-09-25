@@ -118,6 +118,37 @@ function UIController:KnitStart()
         self.ResultScreen:Show(summary)
     end)
 
+
+function UIController:KnitStart()
+    local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
+    self.HUD = Knit.GetController("HUDController")
+    if self.HUD and self.HUD.OnInterfaceReady then
+        self.HUD:OnInterfaceReady(function()
+            if self.HUD then
+                self.HUD:Update(self.State)
+            end
+        end)
+    end
+    self.ResultScreen = ResultScreen.new(playerGui)
+
+    Net:GetEvent("HUD").OnClientEvent:Connect(function(payload)
+        self:ApplyHUDUpdate(payload)
+    end)
+
+    Net:GetEvent("GameState").OnClientEvent:Connect(function(data)
+        if data.Type == "WaveStart" then
+            self.HUD:PlayWaveAnnouncement(data.Wave)
+        elseif data.Type == "TeleportFailed" then
+            self.HUD:ShowMessage("Teleport failed: " .. tostring(data.Message))
+        end
+    end)
+
+    Net:GetEvent("Result").OnClientEvent:Connect(function(summary)
+        self.HUD:ShowMessage("Session ended: " .. tostring(summary.Reason))
+        self.ResultScreen:Show(summary)
+    end)
+
+
     Net:GetEvent("DashCooldown").OnClientEvent:Connect(function(data)
         self:OnDashCooldown(data)
     end)
