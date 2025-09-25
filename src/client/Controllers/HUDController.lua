@@ -134,6 +134,8 @@ function HUDController:KnitInit()
     self.PartyEntries = {}
     self.LastMessageTask = nil
     self.AlertTasks = {}
+    self.InterfaceSignal = Instance.new("BindableEvent")
+    self.InterfaceSignal.Name = "HUDInterfaceReady"
 end
 
 function HUDController:KnitStart()
@@ -143,12 +145,74 @@ function HUDController:KnitStart()
     end
 
     local playerGui = player:WaitForChild("PlayerGui")
-    local existing = playerGui:FindFirstChild("SkillSurvivalHUD")
-    if existing and existing:IsA("ScreenGui") then
-        self:UseExistingInterface(existing)
-    else
-        self:CreateInterface(playerGui)
+    local function tryAttach(screen)
+        if screen and screen:IsA("ScreenGui") and screen.Name == "SkillSurvivalHUD" then
+            self:UseExistingInterface(screen)
+        end
     end
+
+    local existing = playerGui:FindFirstChild("SkillSurvivalHUD")
+    if existing then
+        tryAttach(existing)
+    end
+
+    playerGui.ChildAdded:Connect(function(child)
+        if child.Name == "SkillSurvivalHUD" then
+            task.defer(tryAttach, child)
+        end
+    end)
+end
+
+function HUDController:EnsureInterface(playerGui: PlayerGui?)
+    if self.Screen and self.Screen.Parent then
+        return self.Screen
+    end
+
+    playerGui = playerGui or (Players.LocalPlayer and Players.LocalPlayer:FindFirstChildOfClass("PlayerGui"))
+    if not playerGui then
+        local player = Players.LocalPlayer
+        if player then
+            playerGui = player:FindFirstChild("PlayerGui")
+        end
+    end
+
+    if not playerGui then
+        return nil
+    end
+
+    local existing = playerGui:FindFirstChild("SkillSurvivalHUD")
+    if existing then
+        self:UseExistingInterface(existing)
+        return self.Screen
+    end
+
+    if typeof(self.CreateInterface) == "function" then
+        self:CreateInterface(playerGui)
+        return self.Screen
+    end
+
+    return nil
+end
+
+function HUDController:KnitShutdown()
+    if self.InterfaceSignal then
+        self.InterfaceSignal:Destroy()
+        self.InterfaceSignal = nil
+    end
+    self.Screen = nil
+    self.Elements = {}
+end
+
+function HUDController:OnInterfaceReady(callback)
+    if typeof(callback) ~= "function" then
+        return nil
+    end
+
+    if self.Screen then
+        task.defer(callback, self.Screen)
+    end
+
+    return self.InterfaceSignal.Event:Connect(callback)
 end
 
 local function resolveCooldownSlot(root: Instance?)
@@ -184,6 +248,12 @@ function HUDController:CaptureInterfaceElements(screen: ScreenGui, abilityConfig
     local safeFrame = screen:FindFirstChild("SafeFrame")
     if not safeFrame then
         warn("HUDController: SafeFrame missing from HUD")
+        self.Screen = screen
+        self.Elements = {}
+        self.PartyEntries = {}
+        if self.InterfaceSignal then
+            self.InterfaceSignal:Fire(screen)
+        end
         return
     end
 
@@ -219,6 +289,12 @@ function HUDController:CaptureInterfaceElements(screen: ScreenGui, abilityConfig
 
     if not (skill and dash) then
         warn("HUDController: Ability slots missing or malformed")
+        self.Screen = screen
+        self.Elements = {}
+        self.PartyEntries = {}
+        if self.InterfaceSignal then
+            self.InterfaceSignal:Fire(screen)
+        end
         return
     end
 
@@ -444,6 +520,15 @@ function HUDController:CaptureInterfaceElements(screen: ScreenGui, abilityConfig
     dash.CooldownLabel.Text = self.DashReadyText
     dash.CooldownLabel.TextColor3 = self.DashReadyColor
 
+    if self.PartyEntries then
+        for key, entry in pairs(self.PartyEntries) do
+            if typeof(entry) == "table" and entry.Frame then
+                entry.Frame:Destroy()
+            end
+            self.PartyEntries[key] = nil
+        end
+    end
+
     self.Elements = {
         WaveLabel = waveLabel,
         EnemyLabel = enemyLabel,
@@ -465,6 +550,12 @@ function HUDController:CaptureInterfaceElements(screen: ScreenGui, abilityConfig
         LevelLabel = levelLabel,
         XPBar = xpBar,
     }
+
+    self.PartyEntries = {}
+
+    if self.InterfaceSignal then
+        self.InterfaceSignal:Fire(screen)
+    end
 end
 
 function HUDController:UseExistingInterface(screen: ScreenGui)
@@ -472,6 +563,11 @@ function HUDController:UseExistingInterface(screen: ScreenGui)
     local abilityConfig = uiConfig.Abilities or {}
     local dashConfig = uiConfig.Dash or {}
 
+    if self.Screen == screen then
+        return
+    end
+
+    screen.Enabled = true
     screen.ResetOnSpawn = false
     screen.IgnoreGuiInset = false
     screen.DisplayOrder = (uiConfig.DisplayOrder and uiConfig.DisplayOrder.HUD) or 0
@@ -777,7 +873,7 @@ function HUDController:CreateInterface(playerGui: PlayerGui)
     partyLayout.FillDirection = Enum.FillDirection.Vertical
     partyLayout.SortOrder = Enum.SortOrder.LayoutOrder
     partyLayout.Padding = UDim.new(0, uiConfig.Party and uiConfig.Party.Padding or 6)
-    partyLayout.HorizontalAlignment = Enum.HorizontalAlignment.Stretch
+    partyLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
     partyLayout.VerticalAlignment = Enum.VerticalAlignment.Top
     partyLayout.Parent = partyContainer
 
@@ -1157,17 +1253,26 @@ function HUDController:UpdateParty(partyState)
         end
     end
 
-    if order == 0 and self.Elements.PartyEmptyLabel then
-        self.Elements.PartyEmptyLabel.Text = Config.UI.Party and Config.UI.Party.EmptyText or ""
-        self.Elements.PartyEmptyLabel.Visible = (self.Elements.PartyEmptyLabel.Text ~= "")
-    elseif self.Elements.PartyEmptyLabel then
-        self.Elements.PartyEmptyLabel.Visible = false
+    local emptyLabel = self.Elements.PartyEmptyLabel
+    if not emptyLabel then
+        return
+    end
+
+    if order == 0 then
+        local uiConfig = Config.UI or {}
+        local partyConfig = uiConfig.Party or {}
+        emptyLabel.Text = partyConfig.EmptyText or ""
+        emptyLabel.Visible = emptyLabel.Text ~= ""
+    else
+        emptyLabel.Visible = false
     end
 end
 
 function HUDController:CreatePartyEntry(parent: Instance)
-    local partyConfig = Config.UI and Config.UI.Party or {}
+    local uiConfig = Config.UI or {}
+    local partyConfig = uiConfig.Party or {}
     local entryHeight = partyConfig.EntryHeight or 42
+
     local entry = Instance.new("Frame")
     entry.Name = "PartyEntry"
     entry.BackgroundColor3 = partyConfig.BackgroundColor or Color3.fromRGB(18, 24, 32)
@@ -1200,11 +1305,12 @@ function HUDController:CreatePartyEntry(parent: Instance)
     fillCorner.CornerRadius = UDim.new(0, partyConfig.CornerRadius or 8)
     fillCorner.Parent = fill
 
-    local nameLabel = createTextLabel(entry, "", Config.UI and (Config.UI.Party and Config.UI.Party.Font or Config.UI.Font) or Enum.Font.Gotham, partyConfig.NameTextSize or 16, Enum.TextXAlignment.Left)
+    local font = partyConfig.Font or uiConfig.Font or Enum.Font.Gotham
+    local nameLabel = createTextLabel(entry, "", font, partyConfig.NameTextSize or 16, Enum.TextXAlignment.Left, "NameLabel")
     nameLabel.Position = UDim2.new(0, 10, 0, 0)
     nameLabel.Size = UDim2.new(0.5, -10, 1, 0)
 
-    local healthLabel = createTextLabel(entry, "", Config.UI and (Config.UI.Party and Config.UI.Party.Font or Config.UI.Font) or Enum.Font.Gotham, partyConfig.HealthTextSize or 16, Enum.TextXAlignment.Right)
+    local healthLabel = createTextLabel(entry, "", font, partyConfig.HealthTextSize or 16, Enum.TextXAlignment.Right, "HealthLabel")
     healthLabel.AnchorPoint = Vector2.new(1, 0)
     healthLabel.Position = UDim2.new(1, -10, 0, 0)
     healthLabel.Size = UDim2.new(0.5, 0, 1, 0)
@@ -1218,6 +1324,9 @@ function HUDController:CreatePartyEntry(parent: Instance)
 end
 
 function HUDController:ApplyPartyEntry(entry, data)
+    local uiConfig = Config.UI or {}
+    local partyConfig = uiConfig.Party or {}
+
     local name = "Player"
     local health = 0
     local maxHealth = 0
@@ -1226,27 +1335,33 @@ function HUDController:ApplyPartyEntry(entry, data)
         name = data.DisplayName or data.Name or name
         health = data.Health or data.Current or data.Value or health
         maxHealth = data.MaxHealth or data.Max or data.Capacity or maxHealth
-        if data.UserId == Players.LocalPlayer.UserId or data.IsLocal then
+
+        local localPlayer = Players.LocalPlayer
+        if localPlayer and (data.UserId == localPlayer.UserId or data.IsLocal) then
             entry.Frame.BackgroundTransparency = 0.18
         else
-            entry.Frame.BackgroundTransparency = Config.UI and Config.UI.Party and Config.UI.Party.BackgroundTransparency or 0.25
+            entry.Frame.BackgroundTransparency = partyConfig.BackgroundTransparency or 0.25
         end
     end
 
     entry.NameLabel.Text = name
 
-    local ratio = 0
-    if typeof(health) == "number" then
-        health = math.max(0, health)
-    else
+    if typeof(health) ~= "number" then
         health = 0
     end
-    if typeof(maxHealth) == "number" and maxHealth > 0 then
+    if typeof(maxHealth) ~= "number" then
+        maxHealth = 0
+    end
+
+    health = math.max(0, health)
+
+    local ratio = 0
+    if maxHealth > 0 then
         maxHealth = math.max(maxHealth, health, 1)
         ratio = math.clamp(health / maxHealth, 0, 1)
     elseif typeof(data) == "table" and typeof(data.Ratio) == "number" then
         ratio = math.clamp(data.Ratio, 0, 1)
-        if maxHealth <= 0 then
+        if maxHealth <= 0 and ratio > 0 then
             maxHealth = math.floor(health / math.max(ratio, 0.0001))
         end
     end
