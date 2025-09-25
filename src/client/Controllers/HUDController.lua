@@ -134,6 +134,8 @@ function HUDController:KnitInit()
     self.PartyEntries = {}
     self.LastMessageTask = nil
     self.AlertTasks = {}
+    self.InterfaceSignal = Instance.new("BindableEvent")
+    self.InterfaceSignal.Name = "HUDInterfaceReady"
 end
 
 function HUDController:KnitStart()
@@ -143,12 +145,74 @@ function HUDController:KnitStart()
     end
 
     local playerGui = player:WaitForChild("PlayerGui")
-    local existing = playerGui:FindFirstChild("SkillSurvivalHUD")
-    if existing and existing:IsA("ScreenGui") then
-        self:UseExistingInterface(existing)
-    else
-        self:CreateInterface(playerGui)
+    local function tryAttach(screen)
+        if screen and screen:IsA("ScreenGui") and screen.Name == "SkillSurvivalHUD" then
+            self:UseExistingInterface(screen)
+        end
     end
+
+    local existing = playerGui:FindFirstChild("SkillSurvivalHUD")
+    if existing then
+        tryAttach(existing)
+    end
+
+    playerGui.ChildAdded:Connect(function(child)
+        if child.Name == "SkillSurvivalHUD" then
+            task.defer(tryAttach, child)
+        end
+    end)
+end
+
+function HUDController:EnsureInterface(playerGui: PlayerGui?)
+    if self.Screen and self.Screen.Parent then
+        return self.Screen
+    end
+
+    playerGui = playerGui or (Players.LocalPlayer and Players.LocalPlayer:FindFirstChildOfClass("PlayerGui"))
+    if not playerGui then
+        local player = Players.LocalPlayer
+        if player then
+            playerGui = player:FindFirstChild("PlayerGui")
+        end
+    end
+
+    if not playerGui then
+        return nil
+    end
+
+    local existing = playerGui:FindFirstChild("SkillSurvivalHUD")
+    if existing then
+        self:UseExistingInterface(existing)
+        return self.Screen
+    end
+
+    if typeof(self.CreateInterface) == "function" then
+        self:CreateInterface(playerGui)
+        return self.Screen
+    end
+
+    return nil
+end
+
+function HUDController:KnitShutdown()
+    if self.InterfaceSignal then
+        self.InterfaceSignal:Destroy()
+        self.InterfaceSignal = nil
+    end
+    self.Screen = nil
+    self.Elements = {}
+end
+
+function HUDController:OnInterfaceReady(callback)
+    if typeof(callback) ~= "function" then
+        return nil
+    end
+
+    if self.Screen then
+        task.defer(callback, self.Screen)
+    end
+
+    return self.InterfaceSignal.Event:Connect(callback)
 end
 
 local function resolveCooldownSlot(root: Instance?)
@@ -184,6 +248,12 @@ function HUDController:CaptureInterfaceElements(screen: ScreenGui, abilityConfig
     local safeFrame = screen:FindFirstChild("SafeFrame")
     if not safeFrame then
         warn("HUDController: SafeFrame missing from HUD")
+        self.Screen = screen
+        self.Elements = {}
+        self.PartyEntries = {}
+        if self.InterfaceSignal then
+            self.InterfaceSignal:Fire(screen)
+        end
         return
     end
 
@@ -219,6 +289,12 @@ function HUDController:CaptureInterfaceElements(screen: ScreenGui, abilityConfig
 
     if not (skill and dash) then
         warn("HUDController: Ability slots missing or malformed")
+        self.Screen = screen
+        self.Elements = {}
+        self.PartyEntries = {}
+        if self.InterfaceSignal then
+            self.InterfaceSignal:Fire(screen)
+        end
         return
     end
 
@@ -444,6 +520,15 @@ function HUDController:CaptureInterfaceElements(screen: ScreenGui, abilityConfig
     dash.CooldownLabel.Text = self.DashReadyText
     dash.CooldownLabel.TextColor3 = self.DashReadyColor
 
+    if self.PartyEntries then
+        for key, entry in pairs(self.PartyEntries) do
+            if typeof(entry) == "table" and entry.Frame then
+                entry.Frame:Destroy()
+            end
+            self.PartyEntries[key] = nil
+        end
+    end
+
     self.Elements = {
         WaveLabel = waveLabel,
         EnemyLabel = enemyLabel,
@@ -465,6 +550,12 @@ function HUDController:CaptureInterfaceElements(screen: ScreenGui, abilityConfig
         LevelLabel = levelLabel,
         XPBar = xpBar,
     }
+
+    self.PartyEntries = {}
+
+    if self.InterfaceSignal then
+        self.InterfaceSignal:Fire(screen)
+    end
 end
 
 function HUDController:UseExistingInterface(screen: ScreenGui)
@@ -472,6 +563,11 @@ function HUDController:UseExistingInterface(screen: ScreenGui)
     local abilityConfig = uiConfig.Abilities or {}
     local dashConfig = uiConfig.Dash or {}
 
+    if self.Screen == screen then
+        return
+    end
+
+    screen.Enabled = true
     screen.ResetOnSpawn = false
     screen.IgnoreGuiInset = false
     screen.DisplayOrder = (uiConfig.DisplayOrder and uiConfig.DisplayOrder.HUD) or 0
@@ -777,7 +873,7 @@ function HUDController:CreateInterface(playerGui: PlayerGui)
     partyLayout.FillDirection = Enum.FillDirection.Vertical
     partyLayout.SortOrder = Enum.SortOrder.LayoutOrder
     partyLayout.Padding = UDim.new(0, uiConfig.Party and uiConfig.Party.Padding or 6)
-    partyLayout.HorizontalAlignment = Enum.HorizontalAlignment.Stretch
+    partyLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
     partyLayout.VerticalAlignment = Enum.VerticalAlignment.Top
     partyLayout.Parent = partyContainer
 

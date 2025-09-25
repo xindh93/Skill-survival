@@ -368,7 +368,7 @@
                 "FillDirection": "Vertical",
                 "SortOrder": "LayoutOrder",
                 "Padding": { "UDim": [0, 8] },
-                "HorizontalAlignment": "Stretch",
+                "HorizontalAlignment": "Left",
                 "VerticalAlignment": "Top"
               }
             },

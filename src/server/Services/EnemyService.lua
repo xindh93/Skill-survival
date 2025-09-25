@@ -15,16 +15,22 @@ local function applyCollisionGroup(instance: Instance, groupName: string)
         return
     end
 
+    local function setCollisionGroup(part: BasePart)
+        if part.CollisionGroup ~= groupName then
+            part.CollisionGroup = groupName
+        end
+    end
+
     for _, descendant in ipairs(instance:GetDescendants()) do
         if descendant:IsA("BasePart") then
-            PhysicsService:SetPartCollisionGroup(descendant, groupName)
+            setCollisionGroup(descendant)
         end
     end
 
     if instance:IsA("Model") then
         instance.DescendantAdded:Connect(function(descendant)
             if descendant:IsA("BasePart") then
-                PhysicsService:SetPartCollisionGroup(descendant, groupName)
+                setCollisionGroup(descendant)
             end
         end)
     end
@@ -56,11 +62,21 @@ function EnemyService:EnsureCollisionGroups()
             return
         end
 
-        local exists = pcall(function()
+        local success, exists = pcall(function()
+            if PhysicsService.CollisionGroupExists then
+                return PhysicsService:CollisionGroupExists(name)
+            end
+
             PhysicsService:GetCollisionGroupId(name)
+            return true
         end)
-        if not exists then
-            PhysicsService:CreateCollisionGroup(name)
+
+        if not success or not exists then
+            if PhysicsService.RegisterCollisionGroup then
+                PhysicsService:RegisterCollisionGroup(name)
+            else
+                PhysicsService:CreateCollisionGroup(name)
+            end
         end
     end
 

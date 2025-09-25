@@ -35,6 +35,8 @@ local DashService = Knit.CreateService({
     Client = {},
 })
 
+local DASH_PHYSICAL_PROPERTIES = PhysicalProperties.new(0.0001, 0, 0, 0, 0)
+
 function DashService:KnitInit()
     self.ActiveDashes = {} :: {[Player]: DashState}
     self.CooldownThreads = {} :: {[Player]: thread}
@@ -225,7 +227,7 @@ function DashService:HandleDashRequest(player: Player, rawDirection)
     self.LastDashReadyTime[player] = nextReadyTime
 
     humanoid.AutoRotate = false
-    root.CustomPhysicalProperties = PhysicalProperties.new(0, 0, 0, 0, 0)
+    root.CustomPhysicalProperties = DASH_PHYSICAL_PROPERTIES
     character:SetAttribute("IFrame", true)
     self:ScheduleIFrameClear(character, dashConfig.IFrame)
 

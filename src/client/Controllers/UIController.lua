@@ -37,11 +37,67 @@ function UIController:KnitInit()
     self.EstimatedEnemyCount = 0
 end
 
+function UIController:GetHUD()
+    local hud = self.HUD
+    if hud then
+        return hud
+    end
+
+    hud = Knit.GetController("HUDController")
+    if hud then
+        self.HUD = hud
+    end
+
+    return hud
+end
+
+function UIController:RefreshHUD()
+    local hud = self:GetHUD()
+    if hud and typeof(hud.Update) == "function" then
+        hud:Update(self.State)
+        return hud
+    end
+
+    return nil
+end
+
+function UIController:WithHUD(methodName, ...)
+    local hud = self:GetHUD()
+    if not hud then
+        return nil
+    end
+
+    local method = hud[methodName]
+    if typeof(method) == "function" then
+        return method(hud, ...)
+    end
+
+    return nil
+end
+
 function UIController:KnitStart()
     local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
     self.HUD = Knit.GetController("HUDController")
-    if self.HUD and self.HUD.CreateInterface and not self.HUD.Screen then
-        self.HUD:CreateInterface(playerGui)
+
+    local function refreshHUD()
+        self:RefreshHUD()
+    end
+
+    if self.HUD then
+        if typeof(self.HUD.EnsureInterface) == "function" then
+            self.HUD:EnsureInterface(playerGui)
+        end
+
+        local onInterfaceReady = self.HUD.OnInterfaceReady
+        if typeof(onInterfaceReady) == "function" then
+            onInterfaceReady(self.HUD, refreshHUD)
+        elseif self.HUD.InterfaceSignal and self.HUD.InterfaceSignal.Event then
+            self.HUD.InterfaceSignal.Event:Connect(refreshHUD)
+        end
+
+        if self.HUD.Screen then
+            task.defer(refreshHUD)
+        end
     end
     self.ResultScreen = ResultScreen.new(playerGui)
 
@@ -51,14 +107,14 @@ function UIController:KnitStart()
 
     Net:GetEvent("GameState").OnClientEvent:Connect(function(data)
         if data.Type == "WaveStart" then
-            self.HUD:PlayWaveAnnouncement(data.Wave)
+            self:WithHUD("PlayWaveAnnouncement", data.Wave)
         elseif data.Type == "TeleportFailed" then
-            self.HUD:ShowMessage("Teleport failed: " .. tostring(data.Message))
+            self:WithHUD("ShowMessage", "Teleport failed: " .. tostring(data.Message))
         end
     end)
 
     Net:GetEvent("Result").OnClientEvent:Connect(function(summary)
-        self.HUD:ShowMessage("Session ended: " .. tostring(summary.Reason))
+        self:WithHUD("ShowMessage", "Session ended: " .. tostring(summary.Reason))
         self.ResultScreen:Show(summary)
     end)
 
@@ -79,9 +135,12 @@ function UIController:KnitStart()
     end)
 
     RunService.RenderStepped:Connect(function()
-        if not self.HUD then
+        local hud = self:GetHUD()
+        if not hud then
             return
         end
+
+        self.HUD = hud
 
         local now = Workspace:GetServerTimeNow()
         local needsUpdate = false
@@ -187,11 +246,11 @@ function UIController:KnitStart()
         end
 
         if needsUpdate or hasActiveSkill then
-            self.HUD:Update(self.State)
+            self:RefreshHUD()
         end
     end)
 
-    self.HUD:Update(self.State)
+    self:RefreshHUD()
 end
 
 function UIController:ApplyHUDUpdate(payload)
@@ -325,7 +384,7 @@ function UIController:ApplyHUDUpdate(payload)
         end
     end
 
-    self.HUD:Update(self.State)
+    self:RefreshHUD()
 end
 
 function UIController:OnDashCooldown(data)
@@ -358,9 +417,7 @@ function UIController:OnDashCooldown(data)
     dashState.ReadyTime = readyTime
     dashState.LastUpdate = now
 
-    if self.HUD then
-        self.HUD:Update(self.State)
-    end
+    self:RefreshHUD()
 end
 
 function UIController:OnPartyUpdate(partyData)
@@ -370,21 +427,7 @@ function UIController:OnPartyUpdate(partyData)
         self.State.Party = partyData
     end
 
-    if self.HUD then
-        self.HUD:Update(self.State)
-    end
-end
-
-function UIController:OnPartyUpdate(partyData)
-    if typeof(partyData) ~= "table" then
-        self.State.Party = {}
-    else
-        self.State.Party = partyData
-    end
-
-    if self.HUD then
-        self.HUD:Update(self.State)
-    end
+    self:RefreshHUD()
 end
 
 function UIController:OnEnemyCountDelta(delta)
@@ -395,9 +438,7 @@ function UIController:OnEnemyCountDelta(delta)
     if self.State.State == "Results" or self.State.State == "Idle" then
         self.EstimatedEnemyCount = 0
         self.State.RemainingEnemies = 0
-        if self.HUD then
-            self.HUD:Update(self.State)
-        end
+        self:RefreshHUD()
         return
     end
 
@@ -414,9 +455,7 @@ function UIController:OnEnemyCountDelta(delta)
     self.EstimatedEnemyCount = count
     self.State.RemainingEnemies = count
 
-    if self.HUD then
-        self.HUD:Update(self.State)
-    end
+    self:RefreshHUD()
 end
 
 function UIController:ApplyOptions(options)
