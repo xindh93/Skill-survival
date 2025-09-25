@@ -40,8 +40,12 @@ end
 function UIController:KnitStart()
     local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
     self.HUD = Knit.GetController("HUDController")
-    if self.HUD and self.HUD.CreateInterface and not self.HUD.Screen then
-        self.HUD:CreateInterface(playerGui)
+    if self.HUD and self.HUD.OnInterfaceReady then
+        self.HUD:OnInterfaceReady(function()
+            if self.HUD then
+                self.HUD:Update(self.State)
+            end
+        end)
     end
     self.ResultScreen = ResultScreen.new(playerGui)
 
