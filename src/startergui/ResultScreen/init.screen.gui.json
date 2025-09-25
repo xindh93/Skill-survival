@@ -1,0 +1,96 @@
+{
+  "$className": "ScreenGui",
+  "$properties": {
+    "Name": "ResultScreen",
+    "ResetOnSpawn": false,
+    "IgnoreGuiInset": true,
+    "Enabled": false
+  },
+  "$children": {
+    "Container": {
+      "$className": "Frame",
+      "$properties": {
+        "Name": "Container",
+        "AnchorPoint": { "Vector2": [0.5, 0.5] },
+        "Position": { "UDim2": [0.5, 0, 0.5, 0] },
+        "Size": { "UDim2": [0, 420, 0, 320] },
+        "BackgroundColor3": { "Color3": [0.078431, 0.078431, 0.078431] },
+        "BackgroundTransparency": 0.2,
+        "BorderSizePixel": 0
+      },
+      "$children": {
+        "TitleLabel": {
+          "$className": "TextLabel",
+          "$properties": {
+            "Name": "TitleLabel",
+            "BackgroundTransparency": 1,
+            "Font": "GothamBold",
+            "Text": "Session Summary",
+            "TextColor3": { "Color3": [1, 1, 1] },
+            "TextSize": 28,
+            "Size": { "UDim2": [1, -40, 0, 40] },
+            "Position": { "UDim2": [0, 20, 0, 20] }
+          }
+        },
+        "SummaryText": {
+          "$className": "TextLabel",
+          "$properties": {
+            "Name": "SummaryText",
+            "BackgroundTransparency": 1,
+            "Font": "Gotham",
+            "Text": "",
+            "TextColor3": { "Color3": [1, 1, 1] },
+            "TextSize": 18,
+            "TextWrapped": true,
+            "TextXAlignment": "Left",
+            "TextYAlignment": "Top",
+            "Size": { "UDim2": [1, -40, 0, 160] },
+            "Position": { "UDim2": [0, 20, 0, 70] }
+          }
+        },
+        "StatusLabel": {
+          "$className": "TextLabel",
+          "$properties": {
+            "Name": "StatusLabel",
+            "BackgroundTransparency": 1,
+            "Font": "Gotham",
+            "Text": "",
+            "TextColor3": { "Color3": [0.784314, 0.784314, 0.784314] },
+            "TextSize": 16,
+            "TextWrapped": true,
+            "Size": { "UDim2": [1, -40, 0, 40] },
+            "Position": { "UDim2": [0, 20, 0, 235] }
+          }
+        },
+        "RetryButton": {
+          "$className": "TextButton",
+          "$properties": {
+            "Name": "RetryButton",
+            "Text": "Play Again",
+            "Font": "GothamSemibold",
+            "TextSize": 18,
+            "Size": { "UDim2": [0.45, 0, 0, 40] },
+            "Position": { "UDim2": [0.05, 0, 1, -55] },
+            "BackgroundColor3": { "Color3": [0.156863, 0.666667, 0.392157] },
+            "BorderSizePixel": 0,
+            "TextColor3": { "Color3": [1, 1, 1] }
+          }
+        },
+        "LobbyButton": {
+          "$className": "TextButton",
+          "$properties": {
+            "Name": "LobbyButton",
+            "Text": "Return to Lobby",
+            "Font": "GothamSemibold",
+            "TextSize": 18,
+            "Size": { "UDim2": [0.45, 0, 0, 40] },
+            "Position": { "UDim2": [0.5, 0, 1, -55] },
+            "BackgroundColor3": { "Color3": [0.196078, 0.470588, 0.784314] },
+            "BorderSizePixel": 0,
+            "TextColor3": { "Color3": [1, 1, 1] }
+          }
+        }
+      }
+    }
+  }
+}

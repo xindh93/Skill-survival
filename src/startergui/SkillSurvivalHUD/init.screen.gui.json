@@ -1,0 +1,648 @@
+{
+  "$className": "ScreenGui",
+  "$properties": {
+    "Name": "SkillSurvivalHUD",
+    "ResetOnSpawn": false,
+    "IgnoreGuiInset": false,
+    "DisplayOrder": 0
+  },
+  "$children": {
+    "SafeFrame": {
+      "$className": "Frame",
+      "$properties": {
+        "Name": "SafeFrame",
+        "BackgroundTransparency": 1,
+        "Size": { "UDim2": [1, -48, 1, -48] },
+        "Position": { "UDim2": [0, 24, 0, 24] }
+      },
+      "$children": {
+        "LeftColumn": {
+          "$className": "Frame",
+          "$properties": {
+            "Name": "LeftColumn",
+            "BackgroundTransparency": 1,
+            "Size": { "UDim2": [0, 260, 1, -104] }
+          },
+          "$children": {
+            "UIListLayout": {
+              "$className": "UIListLayout",
+              "$properties": {
+                "FillDirection": "Vertical",
+                "SortOrder": "LayoutOrder",
+                "Padding": { "UDim": [0, 14] }
+              }
+            },
+            "StatusPanel": {
+              "$className": "Frame",
+              "$properties": {
+                "Name": "StatusPanel",
+                "BackgroundColor3": { "Color3": [0.070588, 0.094117, 0.12549] },
+                "BackgroundTransparency": 0.35,
+                "BorderSizePixel": 0,
+                "AutomaticSize": "Y",
+                "Size": { "UDim2": [1, 0, 0, 0] }
+              },
+              "$children": {
+                "UICorner": {
+                  "$className": "UICorner",
+                  "$properties": {
+                    "CornerRadius": { "UDim": [0, 12] }
+                  }
+                },
+                "UIStroke": {
+                  "$className": "UIStroke",
+                  "$properties": {
+                    "Color": { "Color3": [0.313725, 0.470588, 0.627451] },
+                    "Thickness": 1.5,
+                    "Transparency": 0.45,
+                    "ApplyStrokeMode": "Border"
+                  }
+                },
+                "UIPadding": {
+                  "$className": "UIPadding",
+                  "$properties": {
+                    "PaddingTop": { "UDim": [0, 12] },
+                    "PaddingBottom": { "UDim": [0, 12] },
+                    "PaddingLeft": { "UDim": [0, 12] },
+                    "PaddingRight": { "UDim": [0, 12] }
+                  }
+                },
+                "UIListLayout": {
+                  "$className": "UIListLayout",
+                  "$properties": {
+                    "FillDirection": "Vertical",
+                    "SortOrder": "LayoutOrder",
+                    "VerticalAlignment": "Top",
+                "Padding": { "UDim": [0, 6] }
+                  }
+                },
+                "WaveLabel": {
+                  "$className": "TextLabel",
+                  "$properties": {
+                    "Name": "WaveLabel",
+                    "BackgroundTransparency": 1,
+                    "Font": "GothamBold",
+                    "Text": "Wave 0",
+                    "TextSize": 20,
+                    "TextColor3": { "Color3": [1, 1, 1] },
+                    "TextStrokeTransparency": 0.6,
+                    "TextXAlignment": "Left",
+                    "TextYAlignment": "Center",
+                    "Size": { "UDim2": [1, 0, 0, 26] },
+                    "LayoutOrder": 1
+                  }
+                },
+                "EnemyLabel": {
+                  "$className": "TextLabel",
+                  "$properties": {
+                    "Name": "EnemyLabel",
+                    "BackgroundTransparency": 1,
+                    "Font": "Gotham",
+                    "Text": "Enemies: 0",
+                    "TextSize": 18,
+                    "TextColor3": { "Color3": [1, 1, 1] },
+                    "TextStrokeTransparency": 0.6,
+                    "TextXAlignment": "Left",
+                    "TextYAlignment": "Center",
+                    "Size": { "UDim2": [1, 0, 0, 24] },
+                    "LayoutOrder": 2
+                  }
+                },
+                "TimerLabel": {
+                  "$className": "TextLabel",
+                  "$properties": {
+                    "Name": "TimerLabel",
+                    "BackgroundTransparency": 1,
+                    "Font": "Gotham",
+                    "Text": "Time: ∞",
+                    "TextSize": 18,
+                    "TextColor3": { "Color3": [1, 1, 1] },
+                    "TextStrokeTransparency": 0.6,
+                    "TextXAlignment": "Left",
+                    "TextYAlignment": "Center",
+                    "Size": { "UDim2": [1, 0, 0, 24] },
+                    "LayoutOrder": 3
+                  }
+                },
+                "GoldLabel": {
+                  "$className": "TextLabel",
+                  "$properties": {
+                    "Name": "GoldLabel",
+                    "BackgroundTransparency": 1,
+                    "Font": "Gotham",
+                    "Text": "Gold: 0",
+                    "TextSize": 18,
+                    "TextColor3": { "Color3": [1, 1, 1] },
+                    "TextStrokeTransparency": 0.6,
+                    "TextXAlignment": "Left",
+                    "TextYAlignment": "Center",
+                    "Size": { "UDim2": [1, 0, 0, 24] },
+                    "LayoutOrder": 4
+                  }
+                }
+              }
+            },
+            "XPPanel": {
+              "$className": "Frame",
+              "$properties": {
+                "Name": "XPPanel",
+                "BackgroundColor3": { "Color3": [0.070588, 0.094117, 0.12549] },
+                "BackgroundTransparency": 0.35,
+                "BorderSizePixel": 0,
+                "AutomaticSize": "Y",
+                "Size": { "UDim2": [1, 0, 0, 0] }
+              },
+              "$children": {
+                "UICorner": {
+                  "$className": "UICorner",
+                  "$properties": {
+                    "CornerRadius": { "UDim": [0, 12] }
+                  }
+                },
+                "UIStroke": {
+                  "$className": "UIStroke",
+                  "$properties": {
+                    "Color": { "Color3": [0.313725, 0.470588, 0.627451] },
+                    "Thickness": 1.5,
+                    "Transparency": 0.45,
+                    "ApplyStrokeMode": "Border"
+                  }
+                },
+                "UIPadding": {
+                  "$className": "UIPadding",
+                  "$properties": {
+                    "PaddingTop": { "UDim": [0, 12] },
+                    "PaddingBottom": { "UDim": [0, 12] },
+                    "PaddingLeft": { "UDim": [0, 12] },
+                    "PaddingRight": { "UDim": [0, 12] }
+                  }
+                },
+                "UIListLayout": {
+                  "$className": "UIListLayout",
+                  "$properties": {
+                    "FillDirection": "Vertical",
+                    "SortOrder": "LayoutOrder",
+                    "VerticalAlignment": "Top",
+                    "Padding": { "UDim": [0, 6] }
+                  }
+                },
+                "XPHeader": {
+                  "$className": "Frame",
+                  "$properties": {
+                    "Name": "XPHeader",
+                    "BackgroundTransparency": 1,
+                    "Size": { "UDim2": [1, 0, 0, 24] },
+                    "LayoutOrder": 1
+                  },
+                  "$children": {
+                    "XPText": {
+                      "$className": "TextLabel",
+                      "$properties": {
+                        "Name": "XPText",
+                        "BackgroundTransparency": 1,
+                        "Font": "Gotham",
+                        "Text": "XP 0",
+                        "TextSize": 18,
+                        "TextColor3": { "Color3": [1, 1, 1] },
+                        "TextStrokeTransparency": 0.6,
+                        "TextXAlignment": "Left",
+                        "TextYAlignment": "Center",
+                        "Size": { "UDim2": [1, -72, 1, 0] }
+                      }
+                    },
+                    "LevelLabel": {
+                      "$className": "TextLabel",
+                      "$properties": {
+                        "Name": "LevelLabel",
+                        "BackgroundTransparency": 1,
+                        "Font": "GothamBold",
+                        "Text": "Lv 1",
+                        "TextSize": 24,
+                        "TextColor3": { "Color3": [1, 1, 1] },
+                        "TextStrokeTransparency": 0.6,
+                        "TextXAlignment": "Right",
+                        "TextYAlignment": "Center",
+                        "AnchorPoint": { "Vector2": [1, 0.5] },
+                        "Position": { "UDim2": [1, 0, 0.5, 0] },
+                        "Size": { "UDim2": [0, 60, 1, 0] }
+                      }
+                    }
+                  }
+                },
+                "XPBar": {
+                  "$className": "Frame",
+                  "$properties": {
+                    "Name": "XPBar",
+                    "BackgroundColor3": { "Color3": [0.070588, 0.094117, 0.12549] },
+                    "BackgroundTransparency": 0.45,
+                    "BorderSizePixel": 0,
+                    "Size": { "UDim2": [1, 0, 0, 18] },
+                    "LayoutOrder": 2
+                  },
+                  "$children": {
+                    "UICorner": {
+                      "$className": "UICorner",
+                      "$properties": {
+                        "CornerRadius": { "UDim": [0, 9] }
+                      }
+                    },
+                    "Fill": {
+                      "$className": "Frame",
+                      "$properties": {
+                        "Name": "Fill",
+                        "BackgroundColor3": { "Color3": [0.345098, 0.713725, 1] },
+                        "BackgroundTransparency": 0.05,
+                        "BorderSizePixel": 0,
+                        "Size": { "UDim2": [0, 0, 1, 0] }
+                      },
+                      "$children": {
+                        "UICorner": {
+                          "$className": "UICorner",
+                          "$properties": {
+                            "CornerRadius": { "UDim": [0, 9] }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "AlertArea": {
+          "$className": "Frame",
+          "$properties": {
+            "Name": "AlertArea",
+            "BackgroundTransparency": 1,
+            "Position": { "UDim2": [0, 274, 0, 14] },
+            "Size": { "UDim2": [1, -274, 0, 140] }
+          },
+          "$children": {
+            "UIListLayout": {
+              "$className": "UIListLayout",
+              "$properties": {
+                "FillDirection": "Vertical",
+                "HorizontalAlignment": "Center",
+                "VerticalAlignment": "Top",
+                "Padding": { "UDim": [0, 8] }
+              }
+            },
+            "WaveAnnouncement": {
+              "$className": "TextLabel",
+              "$properties": {
+                "Name": "WaveAnnouncement",
+                "BackgroundTransparency": 1,
+                "Font": "GothamBold",
+                "Text": "",
+                "TextSize": 20,
+                "TextColor3": { "Color3": [1, 1, 1] },
+                "TextStrokeTransparency": 0.6,
+                "TextXAlignment": "Center",
+                "TextYAlignment": "Center",
+                "TextTransparency": 1,
+                "Size": { "UDim2": [1, 0, 0, 48] },
+                "LayoutOrder": 1
+              }
+            },
+            "MessageLabel": {
+              "$className": "TextLabel",
+              "$properties": {
+                "Name": "MessageLabel",
+                "BackgroundTransparency": 1,
+                "Font": "GothamBold",
+                "Text": "",
+                "TextSize": 20,
+                "TextColor3": { "Color3": [1, 1, 1] },
+                "TextStrokeTransparency": 0.6,
+                "TextXAlignment": "Center",
+                "TextYAlignment": "Center",
+                "TextTransparency": 1,
+                "Size": { "UDim2": [1, 0, 0, 40] },
+                "LayoutOrder": 2
+              }
+            },
+            "ReservedAlerts": {
+              "$className": "Frame",
+              "$properties": {
+                "Name": "ReservedAlerts",
+                "BackgroundColor3": { "Color3": [0.070588, 0.094117, 0.12549] },
+                "BackgroundTransparency": 0.35,
+                "BorderSizePixel": 0,
+                "Size": { "UDim2": [1, 0, 0, 56] },
+                "LayoutOrder": 0
+              },
+              "$children": {
+                "ReservedLabel": {
+                  "$className": "TextLabel",
+                  "$properties": {
+                    "Name": "ReservedLabel",
+                    "BackgroundTransparency": 1,
+                    "Font": "Gotham",
+                    "Text": "",
+                    "TextSize": 20,
+                    "TextColor3": { "Color3": [1, 1, 1] },
+                    "TextStrokeTransparency": 0.6,
+                    "TextXAlignment": "Center",
+                    "TextYAlignment": "Center"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "PartyContainer": {
+          "$className": "Frame",
+          "$properties": {
+            "Name": "PartyContainer",
+            "BackgroundTransparency": 1,
+            "AnchorPoint": { "Vector2": [1, 0] },
+            "Position": { "UDim2": [1, 0, 0, 14] },
+            "Size": { "UDim2": [0, 240, 0, 10] },
+            "AutomaticSize": "Y"
+          },
+          "$children": {
+            "UIListLayout": {
+              "$className": "UIListLayout",
+              "$properties": {
+                "FillDirection": "Vertical",
+                "SortOrder": "LayoutOrder",
+                "Padding": { "UDim": [0, 8] },
+                "HorizontalAlignment": "Stretch",
+                "VerticalAlignment": "Top"
+              }
+            },
+            "PartyEmptyLabel": {
+              "$className": "TextLabel",
+              "$properties": {
+                "Name": "PartyEmptyLabel",
+                "BackgroundTransparency": 1,
+                "Font": "Gotham",
+                "Text": "",
+                "TextSize": 16,
+                "TextColor3": { "Color3": [1, 1, 1] },
+                "TextStrokeTransparency": 0.6,
+                "TextXAlignment": "Right",
+                "TextYAlignment": "Center",
+                "LayoutOrder": -1,
+                "TextTransparency": 0.45
+              }
+            }
+          }
+        },
+        "AbilityFrame": {
+          "$className": "Frame",
+          "$properties": {
+            "Name": "AbilityFrame",
+            "BackgroundTransparency": 1,
+            "AnchorPoint": { "Vector2": [0, 1] },
+            "Position": { "UDim2": [0, 0, 1, 0] },
+            "Size": { "UDim2": [0, 260, 0, 90] }
+          },
+          "$children": {
+            "UIListLayout": {
+              "$className": "UIListLayout",
+              "$properties": {
+                "FillDirection": "Horizontal",
+                "SortOrder": "LayoutOrder",
+                "HorizontalAlignment": "Left",
+                "VerticalAlignment": "Bottom",
+                "Padding": { "UDim": [0, 12] }
+              }
+            },
+            "SkillSlot": {
+              "$className": "Frame",
+              "$properties": {
+                "Name": "SkillSlot",
+                "BackgroundTransparency": 1,
+                "Size": { "UDim2": [0, 72, 0, 72] },
+                "LayoutOrder": 1
+              },
+              "$children": {
+                "Slot": {
+                  "$className": "Frame",
+                  "$properties": {
+                    "Name": "Slot",
+                    "BackgroundTransparency": 1,
+                    "Size": { "UDim2": [1, 0, 1, 0] }
+                  },
+                  "$children": {
+                    "Gauge": {
+                      "$className": "Frame",
+                      "$properties": {
+                        "Name": "Gauge",
+                        "BackgroundColor3": { "Color3": [0.070588, 0.094117, 0.12549] },
+                        "BackgroundTransparency": 0.25,
+                        "BorderSizePixel": 0,
+                        "Size": { "UDim2": [1, 0, 1, 0] }
+                      },
+                      "$children": {
+                        "UICorner": {
+                          "$className": "UICorner",
+                          "$properties": {
+                            "CornerRadius": { "UDim": [1, 0] }
+                          }
+                        },
+                        "UIStroke": {
+                          "$className": "UIStroke",
+                          "$properties": {
+                            "Thickness": 2,
+                            "Color": { "Color3": [1, 0.768627, 0.431373] },
+                            "Transparency": 0.2,
+                            "ApplyStrokeMode": "Border"
+                          }
+                        },
+                        "Mask": {
+                          "$className": "Frame",
+                          "$properties": {
+                            "Name": "Mask",
+                            "BackgroundTransparency": 1,
+                            "Size": { "UDim2": [1, 0, 1, 0] },
+                            "ClipsDescendants": true
+                          },
+                          "$children": {
+                            "UICorner": {
+                              "$className": "UICorner",
+                              "$properties": {
+                                "CornerRadius": { "UDim": [1, 0] }
+                              }
+                            },
+                            "Fill": {
+                              "$className": "Frame",
+                              "$properties": {
+                                "Name": "Fill",
+                                "BackgroundColor3": { "Color3": [1, 0.768627, 0.431373] },
+                                "BackgroundTransparency": 0.15,
+                                "BorderSizePixel": 0,
+                                "AnchorPoint": { "Vector2": [0, 1] },
+                                "Position": { "UDim2": [0, 0, 1, 0] },
+                                "Size": { "UDim2": [1, 0, 1, 0] }
+                              },
+                              "$children": {
+                                "UICorner": {
+                                  "$className": "UICorner",
+                                  "$properties": {
+                                    "CornerRadius": { "UDim": [1, 0] }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "KeyLabel": {
+                          "$className": "TextLabel",
+                          "$properties": {
+                            "Name": "KeyLabel",
+                            "BackgroundTransparency": 1,
+                            "Font": "GothamBold",
+                            "Text": "Q",
+                            "TextColor3": { "Color3": [1, 1, 1] },
+                            "TextScaled": true,
+                            "TextXAlignment": "Center",
+                            "TextYAlignment": "Center",
+                            "AnchorPoint": { "Vector2": [0.5, 0.5] },
+                            "Position": { "UDim2": [0.5, 0, 0.32, 0] }
+                          }
+                        },
+                        "CooldownLabel": {
+                          "$className": "TextLabel",
+                          "$properties": {
+                            "Name": "CooldownLabel",
+                            "BackgroundTransparency": 1,
+                            "Font": "GothamBold",
+                            "Text": "Ready",
+                            "TextColor3": { "Color3": [1, 0.921569, 0.784314] },
+                            "TextScaled": true,
+                            "TextXAlignment": "Center",
+                            "TextYAlignment": "Center",
+                            "AnchorPoint": { "Vector2": [0.5, 0.5] },
+                            "Position": { "UDim2": [0.5, 0, 0.72, 0] }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "DashSlot": {
+              "$className": "Frame",
+              "$properties": {
+                "Name": "DashSlot",
+                "BackgroundTransparency": 1,
+                "Size": { "UDim2": [0, 72, 0, 72] },
+                "LayoutOrder": 2
+              },
+              "$children": {
+                "Slot": {
+                  "$className": "Frame",
+                  "$properties": {
+                    "Name": "Slot",
+                    "BackgroundTransparency": 1,
+                    "Size": { "UDim2": [1, 0, 1, 0] }
+                  },
+                  "$children": {
+                    "Gauge": {
+                      "$className": "Frame",
+                      "$properties": {
+                        "Name": "Gauge",
+                        "BackgroundColor3": { "Color3": [0.070588, 0.094117, 0.12549] },
+                        "BackgroundTransparency": 0.25,
+                        "BorderSizePixel": 0,
+                        "Size": { "UDim2": [1, 0, 1, 0] }
+                      },
+                      "$children": {
+                        "UICorner": {
+                          "$className": "UICorner",
+                          "$properties": {
+                            "CornerRadius": { "UDim": [1, 0] }
+                          }
+                        },
+                        "UIStroke": {
+                          "$className": "UIStroke",
+                          "$properties": {
+                            "Thickness": 2,
+                            "Color": { "Color3": [0.470588, 0.784314, 1] },
+                            "Transparency": 0.2,
+                            "ApplyStrokeMode": "Border"
+                          }
+                        },
+                        "Mask": {
+                          "$className": "Frame",
+                          "$properties": {
+                            "Name": "Mask",
+                            "BackgroundTransparency": 1,
+                            "Size": { "UDim2": [1, 0, 1, 0] },
+                            "ClipsDescendants": true
+                          },
+                          "$children": {
+                            "UICorner": {
+                              "$className": "UICorner",
+                              "$properties": {
+                                "CornerRadius": { "UDim": [1, 0] }
+                              }
+                            },
+                            "Fill": {
+                              "$className": "Frame",
+                              "$properties": {
+                                "Name": "Fill",
+                                "BackgroundColor3": { "Color3": [0.470588, 0.784314, 1] },
+                                "BackgroundTransparency": 0.15,
+                                "BorderSizePixel": 0,
+                                "AnchorPoint": { "Vector2": [0, 1] },
+                                "Position": { "UDim2": [0, 0, 1, 0] },
+                                "Size": { "UDim2": [1, 0, 1, 0] }
+                              },
+                              "$children": {
+                                "UICorner": {
+                                  "$className": "UICorner",
+                                  "$properties": {
+                                    "CornerRadius": { "UDim": [1, 0] }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "KeyLabel": {
+                          "$className": "TextLabel",
+                          "$properties": {
+                            "Name": "KeyLabel",
+                            "BackgroundTransparency": 1,
+                            "Font": "GothamBold",
+                            "Text": "E",
+                            "TextColor3": { "Color3": [1, 1, 1] },
+                            "TextScaled": true,
+                            "TextXAlignment": "Center",
+                            "TextYAlignment": "Center",
+                            "AnchorPoint": { "Vector2": [0.5, 0.5] },
+                            "Position": { "UDim2": [0.5, 0, 0.32, 0] }
+                          }
+                        },
+                        "CooldownLabel": {
+                          "$className": "TextLabel",
+                          "$properties": {
+                            "Name": "CooldownLabel",
+                            "BackgroundTransparency": 1,
+                            "Font": "GothamBold",
+                            "Text": "Ready",
+                            "TextColor3": { "Color3": [0.705882, 1, 0.803922] },
+                            "TextScaled": true,
+                            "TextXAlignment": "Center",
+                            "TextYAlignment": "Center",
+                            "AnchorPoint": { "Vector2": [0.5, 0.5] },
+                            "Position": { "UDim2": [0.5, 0, 0.72, 0] }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
