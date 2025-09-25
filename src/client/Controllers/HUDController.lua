@@ -154,6 +154,66 @@ function HUDController:KnitStart()
     local existing = playerGui:FindFirstChild("SkillSurvivalHUD")
     if existing then
         tryAttach(existing)
+
+    end
+
+    playerGui.ChildAdded:Connect(function(child)
+        if child.Name == "SkillSurvivalHUD" then
+            task.defer(tryAttach, child)
+        end
+    end)
+end
+
+function HUDController:EnsureInterface(playerGui: PlayerGui?)
+    if self.Screen and self.Screen.Parent then
+        return self.Screen
+    end
+
+    playerGui = playerGui or (Players.LocalPlayer and Players.LocalPlayer:FindFirstChildOfClass("PlayerGui"))
+    if not playerGui then
+        local player = Players.LocalPlayer
+        if player then
+            playerGui = player:FindFirstChild("PlayerGui")
+        end
+    end
+
+    if not playerGui then
+        return nil
+    end
+
+    local existing = playerGui:FindFirstChild("SkillSurvivalHUD")
+    if existing then
+        self:UseExistingInterface(existing)
+        return self.Screen
+    end
+
+    if typeof(self.CreateInterface) == "function" then
+        self:CreateInterface(playerGui)
+        return self.Screen
+    end
+
+    return nil
+end
+
+function HUDController:KnitShutdown()
+    if self.InterfaceSignal then
+        self.InterfaceSignal:Destroy()
+        self.InterfaceSignal = nil
+    end
+    self.Screen = nil
+    self.Elements = {}
+end
+
+function HUDController:OnInterfaceReady(callback)
+    if typeof(callback) ~= "function" then
+        return nil
+    end
+
+    if self.Screen then
+        task.defer(callback, self.Screen)
+    end
+
+
     end
 
     playerGui.ChildAdded:Connect(function(child)
@@ -180,6 +240,7 @@ function HUDController:OnInterfaceReady(callback)
     if self.Screen then
         task.defer(callback, self.Screen)
     end
+
 
     return self.InterfaceSignal.Event:Connect(callback)
 end
@@ -217,6 +278,12 @@ function HUDController:CaptureInterfaceElements(screen: ScreenGui, abilityConfig
     local safeFrame = screen:FindFirstChild("SafeFrame")
     if not safeFrame then
         warn("HUDController: SafeFrame missing from HUD")
+        self.Screen = screen
+        self.Elements = {}
+        self.PartyEntries = {}
+        if self.InterfaceSignal then
+            self.InterfaceSignal:Fire(screen)
+        end
         return
     end
 
@@ -252,6 +319,12 @@ function HUDController:CaptureInterfaceElements(screen: ScreenGui, abilityConfig
 
     if not (skill and dash) then
         warn("HUDController: Ability slots missing or malformed")
+        self.Screen = screen
+        self.Elements = {}
+        self.PartyEntries = {}
+        if self.InterfaceSignal then
+            self.InterfaceSignal:Fire(screen)
+        end
         return
     end
 
@@ -523,6 +596,9 @@ function HUDController:UseExistingInterface(screen: ScreenGui)
     if self.Screen == screen then
         return
     end
+
+
+    screen.Enabled = true
 
     screen.ResetOnSpawn = false
     screen.IgnoreGuiInset = false
