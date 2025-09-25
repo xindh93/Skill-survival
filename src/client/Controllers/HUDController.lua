@@ -371,15 +371,15 @@ function HUDController:CreateInterface(playerGui: PlayerGui)
     local abilityFrame = Instance.new("Frame")
     abilityFrame.Name = "AbilityFrame"
     abilityFrame.BackgroundTransparency = 1
-    abilityFrame.AnchorPoint = Vector2.new(0, 1)
-    abilityFrame.Position = UDim2.new(0, 0, 1, -abilityBottomOffset)
+    abilityFrame.AnchorPoint = Vector2.new(0, 0)
+    abilityFrame.Position = UDim2.new(1, -abilityWidth, 1, -(abilityHeight + abilityBottomOffset))
     abilityFrame.Size = UDim2.new(0, abilityWidth, 0, abilityHeight)
     abilityFrame.Parent = safeFrame
 
     local abilityLayout = Instance.new("UIListLayout")
     abilityLayout.FillDirection = Enum.FillDirection.Horizontal
     abilityLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    abilityLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
+    abilityLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
     abilityLayout.VerticalAlignment = Enum.VerticalAlignment.Bottom
     abilityLayout.Padding = UDim.new(0, abilitySpacing)
     abilityLayout.Parent = abilityFrame
