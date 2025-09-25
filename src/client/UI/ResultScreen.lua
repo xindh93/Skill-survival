@@ -7,76 +7,16 @@ ResultScreen.__index = ResultScreen
 function ResultScreen.new(playerGui: PlayerGui)
     local self = setmetatable({}, ResultScreen)
 
-    local screen = Instance.new("ScreenGui")
-    screen.Name = "ResultScreen"
-    screen.ResetOnSpawn = false
-    screen.Enabled = false
-    screen.IgnoreGuiInset = true
-    screen.Parent = playerGui
+    local screen = playerGui:WaitForChild("ResultScreen")
+    assert(screen:IsA("ScreenGui"), "ResultScreen must be a ScreenGui")
 
-    local container = Instance.new("Frame")
-    container.AnchorPoint = Vector2.new(0.5, 0.5)
-    container.Position = UDim2.new(0.5, 0, 0.5, 0)
-    container.Size = UDim2.new(0, 420, 0, 320)
-    container.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-    container.BackgroundTransparency = 0.2
-    container.BorderSizePixel = 0
-    container.Parent = screen
+    local container = screen:WaitForChild("Container")
+    assert(container:IsA("Frame"), "ResultScreen.Container must be a Frame")
 
-    local title = Instance.new("TextLabel")
-    title.BackgroundTransparency = 1
-    title.Font = Enum.Font.GothamBold
-    title.Text = "Session Summary"
-    title.TextSize = 28
-    title.TextColor3 = Color3.new(1, 1, 1)
-    title.Size = UDim2.new(1, -40, 0, 40)
-    title.Position = UDim2.new(0, 20, 0, 20)
-    title.Parent = container
-
-    local summaryText = Instance.new("TextLabel")
-    summaryText.BackgroundTransparency = 1
-    summaryText.Font = Enum.Font.Gotham
-    summaryText.TextColor3 = Color3.new(1, 1, 1)
-    summaryText.TextSize = 18
-    summaryText.TextXAlignment = Enum.TextXAlignment.Left
-    summaryText.TextYAlignment = Enum.TextYAlignment.Top
-    summaryText.TextWrapped = true
-    summaryText.Size = UDim2.new(1, -40, 0, 160)
-    summaryText.Position = UDim2.new(0, 20, 0, 70)
-    summaryText.Parent = container
-
-    local statusLabel = Instance.new("TextLabel")
-    statusLabel.BackgroundTransparency = 1
-    statusLabel.Font = Enum.Font.Gotham
-    statusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-    statusLabel.TextSize = 16
-    statusLabel.Text = ""
-    statusLabel.TextWrapped = true
-    statusLabel.Size = UDim2.new(1, -40, 0, 40)
-    statusLabel.Position = UDim2.new(0, 20, 0, 235)
-    statusLabel.Parent = container
-
-    local retryButton = Instance.new("TextButton")
-    retryButton.Text = "Play Again"
-    retryButton.Font = Enum.Font.GothamSemibold
-    retryButton.TextSize = 18
-    retryButton.Size = UDim2.new(0.45, 0, 0, 40)
-    retryButton.Position = UDim2.new(0.05, 0, 1, -55)
-    retryButton.BackgroundColor3 = Color3.fromRGB(40, 170, 100)
-    retryButton.BorderSizePixel = 0
-    retryButton.TextColor3 = Color3.new(1, 1, 1)
-    retryButton.Parent = container
-
-    local lobbyButton = Instance.new("TextButton")
-    lobbyButton.Text = "Return to Lobby"
-    lobbyButton.Font = Enum.Font.GothamSemibold
-    lobbyButton.TextSize = 18
-    lobbyButton.Size = UDim2.new(0.45, 0, 0, 40)
-    lobbyButton.Position = UDim2.new(0.5, 0, 1, -55)
-    lobbyButton.BackgroundColor3 = Color3.fromRGB(50, 120, 200)
-    lobbyButton.BorderSizePixel = 0
-    lobbyButton.TextColor3 = Color3.new(1, 1, 1)
-    lobbyButton.Parent = container
+    local summaryText = container:WaitForChild("SummaryText") :: TextLabel
+    local statusLabel = container:WaitForChild("StatusLabel") :: TextLabel
+    local retryButton = container:WaitForChild("RetryButton") :: TextButton
+    local lobbyButton = container:WaitForChild("LobbyButton") :: TextButton
 
     retryButton.MouseButton1Click:Connect(function()
         self:OnRetry(statusLabel)
