@@ -777,7 +777,7 @@ function HUDController:CreateInterface(playerGui: PlayerGui)
     partyLayout.FillDirection = Enum.FillDirection.Vertical
     partyLayout.SortOrder = Enum.SortOrder.LayoutOrder
     partyLayout.Padding = UDim.new(0, uiConfig.Party and uiConfig.Party.Padding or 6)
-    partyLayout.HorizontalAlignment = Enum.HorizontalAlignment.Stretch
+    partyLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
     partyLayout.VerticalAlignment = Enum.VerticalAlignment.Top
     partyLayout.Parent = partyContainer
 
