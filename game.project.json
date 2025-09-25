@@ -4,6 +4,9 @@
     "$className": "DataModel",
     "ReplicatedStorage": { "Shared": { "$path": "src/shared" } },
     "ServerScriptService": { "Server": { "$path": "src/server" } },
+    "StarterGui": {
+      "SkillSurvivalHUD": { "$path": "src/startergui/SkillSurvivalHUD" }
+    },
     "StarterPlayer": {
       "StarterPlayerScripts": { "Client": { "$path": "src/client" } }
     },
