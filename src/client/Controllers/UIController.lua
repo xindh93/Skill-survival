@@ -5,6 +5,7 @@ local Workspace = game:GetService("Workspace")
 local Knit = require(ReplicatedStorage.Shared.Knit)
 local Net = require(ReplicatedStorage.Shared.Net)
 local Config = require(ReplicatedStorage.Shared.Config)
+local ResultScreen = require(script.Parent.Parent.UI.ResultScreen)
 
 local UIController = Knit.CreateController({
     Name = "UIController",
@@ -109,8 +110,13 @@ function UIController:KnitStart()
         end
     end)
 
+    self.ResultScreen = ResultScreen.new(playerGui)
+
     Net:GetEvent("Result").OnClientEvent:Connect(function(summary)
         self:WithHUD("ShowMessage", "Session ended: " .. tostring(summary.Reason))
+        if self.ResultScreen then
+            self.ResultScreen:Show(summary)
+        end
     end)
 
     Net:GetEvent("DashCooldown").OnClientEvent:Connect(function(data)
