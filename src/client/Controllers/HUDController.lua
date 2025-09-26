@@ -213,34 +213,11 @@ function HUDController:OnInterfaceReady(callback)
         task.defer(callback, self.Screen)
     end
 
-
+    if not self.InterfaceSignal then
+        local signal = Instance.new("BindableEvent")
+        signal.Name = "HUDInterfaceReady"
+        self.InterfaceSignal = signal
     end
-
-    playerGui.ChildAdded:Connect(function(child)
-        if child.Name == "SkillSurvivalHUD" then
-            task.defer(tryAttach, child)
-        end
-    end)
-end
-
-function HUDController:KnitShutdown()
-    if self.InterfaceSignal then
-        self.InterfaceSignal:Destroy()
-        self.InterfaceSignal = nil
-    end
-    self.Screen = nil
-    self.Elements = {}
-end
-
-function HUDController:OnInterfaceReady(callback)
-    if typeof(callback) ~= "function" then
-        return nil
-    end
-
-    if self.Screen then
-        task.defer(callback, self.Screen)
-    end
-
 
     return self.InterfaceSignal.Event:Connect(callback)
 end
