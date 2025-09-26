@@ -4,11 +4,40 @@ local Net = require(ReplicatedStorage.Shared.Net)
 local ResultScreen = {}
 ResultScreen.__index = ResultScreen
 
+local function waitForDescendantOfClass(parent: Instance, className: string)
+    local descendant = parent:FindFirstChildWhichIsA(className, true)
+    if descendant then
+        return descendant
+    end
+
+    while parent.Parent do
+        task.wait()
+        descendant = parent:FindFirstChildWhichIsA(className, true)
+        if descendant then
+            return descendant
+        end
+    end
+
+    return nil
+end
+
 function ResultScreen.new(playerGui: PlayerGui)
     local self = setmetatable({}, ResultScreen)
 
     local screen = playerGui:WaitForChild("ResultScreen")
-    assert(screen:IsA("ScreenGui"), "ResultScreen must be a ScreenGui")
+    if not screen:IsA("ScreenGui") then
+        local descendant = waitForDescendantOfClass(screen, "ScreenGui")
+        if not descendant then
+            error(
+                string.format(
+                    "ResultScreen must be a ScreenGui (found %s)",
+                    typeof(screen) == "Instance" and screen.ClassName or typeof(screen)
+                )
+            )
+        end
+
+        screen = descendant
+    end
 
     local container = screen:WaitForChild("Container")
     assert(container:IsA("Frame"), "ResultScreen.Container must be a Frame")
