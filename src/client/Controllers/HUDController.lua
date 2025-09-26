@@ -407,10 +407,22 @@ function HUDController:CaptureInterfaceElements(screen: ScreenGui, abilityConfig
 
     self.Screen = screen
     self.SkillDisplayKey = abilityConfig.SkillKey or "Q"
-    self.SkillReadyText = abilityConfig.SkillReadyText or "Ready"
+    local skillReadyText = abilityConfig.SkillReadyText
+    if skillReadyText == nil then
+        skillReadyText = "0"
+    else
+        skillReadyText = tostring(skillReadyText)
+    end
+    self.SkillReadyText = skillReadyText
     self.SkillReadyColor = abilityConfig.SkillReadyColor or Color3.fromRGB(255, 235, 200)
     self.PrimarySkillId = abilityConfig.PrimarySkillId or "AOE_Blast"
-    self.DashReadyText = dashConfig.ReadyText or "Ready"
+    local dashReadyText = dashConfig.ReadyText
+    if dashReadyText == nil then
+        dashReadyText = "0"
+    else
+        dashReadyText = tostring(dashReadyText)
+    end
+    self.DashReadyText = dashReadyText
     self.DashReadyColor = dashConfig.ReadyColor or Color3.fromRGB(180, 255, 205)
 
     skill.KeyLabel.Text = self.SkillDisplayKey
@@ -655,7 +667,7 @@ function HUDController:UpdateSkillCooldowns(skillTable)
     local remaining = resolveRemainingTime(info, cooldown)
 
     if remaining > 0.05 then
-        cooldownLabel.Text = string.format("%ds", math.max(1, math.ceil(remaining)))
+        cooldownLabel.Text = tostring(math.max(1, math.ceil(remaining)))
         cooldownLabel.TextColor3 = Color3.new(1, 1, 1)
         cooldownLabel.TextStrokeTransparency = 0.6
         cooldownLabel.Visible = true
@@ -684,7 +696,7 @@ function HUDController:UpdateDashCooldown(dashData)
         dashCooldownLabel.TextStrokeTransparency = 0.6
         dashCooldownLabel.Visible = true
     else
-        dashCooldownLabel.Text = string.format("%ds", math.max(1, math.ceil(remaining)))
+        dashCooldownLabel.Text = tostring(math.max(1, math.ceil(remaining)))
         dashCooldownLabel.TextColor3 = Color3.new(1, 1, 1)
         dashCooldownLabel.TextStrokeTransparency = 0.6
         dashCooldownLabel.Visible = true
