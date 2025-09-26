@@ -28,6 +28,10 @@ function ResultScreen.new(playerGui: PlayerGui)
     if not screen:IsA("ScreenGui") then
         local descendant = waitForDescendantOfClass(screen, "ScreenGui")
         if not descendant then
+        local descendant = screen:FindFirstChildWhichIsA("ScreenGui", true)
+        if descendant then
+            screen = descendant
+        else
             error(
                 string.format(
                     "ResultScreen must be a ScreenGui (found %s)",
@@ -37,6 +41,7 @@ function ResultScreen.new(playerGui: PlayerGui)
         end
 
         screen = descendant
+
     end
 
     local container = screen:WaitForChild("Container")
