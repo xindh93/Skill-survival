@@ -117,10 +117,6 @@ function UIController:KnitStart()
         self:OnDashCooldown(data)
     end)
 
-    Net:GetEvent("PartyUpdate").OnClientEvent:Connect(function(partyData)
-        self:OnPartyUpdate(partyData)
-    end)
-
     Net:GetEvent("EnemySpawned").OnClientEvent:Connect(function()
         self:OnEnemyCountDelta(1)
     end)
@@ -411,16 +407,6 @@ function UIController:OnDashCooldown(data)
     dashState.Remaining = remaining
     dashState.ReadyTime = readyTime
     dashState.LastUpdate = now
-
-    self:RefreshHUD()
-end
-
-function UIController:OnPartyUpdate(partyData)
-    if typeof(partyData) ~= "table" then
-        self.State.Party = {}
-    else
-        self.State.Party = partyData
-    end
 
     self:RefreshHUD()
 end
