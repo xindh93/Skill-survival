@@ -350,8 +350,7 @@ function HUDController:CaptureInterfaceElements(screen: ScreenGui, abilityConfig
             messageLabel.Size = UDim2.new(1, 0, 0, uiConfig.MessageHeight or 40)
         end
         if reservedAlert then
-            reservedAlert.BackgroundColor3 = uiConfig.AlertBackgroundColor or panelBackground
-            reservedAlert.BackgroundTransparency = uiConfig.AlertBackgroundTransparency or 0.35
+            reservedAlert.BackgroundTransparency = 1
             reservedAlert.Size = UDim2.new(1, 0, 0, uiConfig.ReservedAlertHeight or 52)
             local reservedCorner = reservedAlert:FindFirstChildWhichIsA("UICorner")
             if reservedCorner then
@@ -388,8 +387,8 @@ function HUDController:CaptureInterfaceElements(screen: ScreenGui, abilityConfig
         skillStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
     end
     if skill.Fill then
-        skill.Fill.BackgroundColor3 = abilityConfig.SkillFillColor or Color3.fromRGB(255, 196, 110)
-        skill.Fill.BackgroundTransparency = abilityConfig.SkillFillTransparency or 0.15
+        skill.Fill.Visible = false
+        skill.Fill.BackgroundTransparency = 1
     end
 
     dash.Gauge.BackgroundColor3 = dashConfig.BackgroundColor or Color3.fromRGB(18, 24, 32)
@@ -402,8 +401,8 @@ function HUDController:CaptureInterfaceElements(screen: ScreenGui, abilityConfig
         dashStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
     end
     if dash.Fill then
-        dash.Fill.BackgroundColor3 = dashConfig.FillColor or Color3.fromRGB(120, 200, 255)
-        dash.Fill.BackgroundTransparency = dashConfig.FillTransparency or 0.15
+        dash.Fill.Visible = false
+        dash.Fill.BackgroundTransparency = 1
     end
 
     self.Screen = screen
@@ -426,10 +425,8 @@ function HUDController:CaptureInterfaceElements(screen: ScreenGui, abilityConfig
         EnemyLabel = enemyLabel,
         TimerLabel = timerLabel,
         GoldLabel = goldLabel,
-        SkillFill = skill.Fill,
         SkillCooldownLabel = skill.CooldownLabel,
         SkillKeyLabel = skill.KeyLabel,
-        DashFill = dash.Fill,
         DashCooldownLabel = dash.CooldownLabel,
         MessageLabel = messageLabel,
         WaveAnnouncement = waveAnnouncement,
@@ -582,10 +579,9 @@ function HUDController:UpdateXP(state)
 end
 
 function HUDController:UpdateSkillCooldowns(skillTable)
-    local skillFill = self.Elements.SkillFill
     local cooldownLabel = self.Elements.SkillCooldownLabel
     local keyLabel = self.Elements.SkillKeyLabel
-    if not skillFill or not cooldownLabel then
+    if not cooldownLabel then
         return
     end
 
@@ -645,19 +641,8 @@ function HUDController:UpdateSkillCooldowns(skillTable)
         end
     end
 
-    local progress
-    if cooldown > 0 then
-        progress = 1 - math.clamp(remaining / cooldown, 0, 1)
-    elseif remaining > 0 then
-        progress = 0
-    else
-        progress = 1
-    end
-
-    skillFill.Size = UDim2.new(1, 0, progress, 0)
-
     if remaining > 0.05 then
-        cooldownLabel.Text = string.format("%.1f", remaining)
+        cooldownLabel.Text = tostring(math.ceil(remaining))
         cooldownLabel.TextColor3 = Color3.new(1, 1, 1)
     else
         cooldownLabel.Text = readyText
@@ -666,19 +651,14 @@ function HUDController:UpdateSkillCooldowns(skillTable)
 end
 
 function HUDController:UpdateDashCooldown(dashData)
-    local dashFill = self.Elements.DashFill
     local dashCooldownLabel = self.Elements.DashCooldownLabel
-    if not dashFill or not dashCooldownLabel then
+    if not dashCooldownLabel then
         return
     end
 
     local remaining = 0
-    local cooldown = 0
 
     if typeof(dashData) == "table" then
-        if typeof(dashData.Cooldown) == "number" then
-            cooldown = math.max(0, dashData.Cooldown)
-        end
         if typeof(dashData.ReadyTime) == "number" then
             local now = Workspace:GetServerTimeNow()
             remaining = math.max(0, dashData.ReadyTime - now)
@@ -687,17 +667,6 @@ function HUDController:UpdateDashCooldown(dashData)
         end
     end
 
-    local progress
-    if cooldown > 0 then
-        progress = 1 - math.clamp(remaining / cooldown, 0, 1)
-    elseif remaining > 0 then
-        progress = 0
-    else
-        progress = 1
-    end
-
-    dashFill.Size = UDim2.new(1, 0, progress, 0)
-
     local readyText = self.DashReadyText or "Ready"
     local readyColor = self.DashReadyColor or Color3.fromRGB(180, 255, 205)
 
@@ -705,7 +674,7 @@ function HUDController:UpdateDashCooldown(dashData)
         dashCooldownLabel.Text = readyText
         dashCooldownLabel.TextColor3 = readyColor
     else
-        dashCooldownLabel.Text = string.format("%.1f", remaining)
+        dashCooldownLabel.Text = tostring(math.ceil(remaining))
         dashCooldownLabel.TextColor3 = Color3.new(1, 1, 1)
     end
 end
