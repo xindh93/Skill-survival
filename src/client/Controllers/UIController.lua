@@ -6,8 +6,6 @@ local Knit = require(ReplicatedStorage.Shared.Knit)
 local Net = require(ReplicatedStorage.Shared.Net)
 local Config = require(ReplicatedStorage.Shared.Config)
 
-local ResultScreen = require(script.Parent.Parent.UI.ResultScreen)
-
 local UIController = Knit.CreateController({
     Name = "UIController",
 })
@@ -99,8 +97,6 @@ function UIController:KnitStart()
             task.defer(refreshHUD)
         end
     end
-    self.ResultScreen = ResultScreen.new(playerGui)
-
     Net:GetEvent("HUD").OnClientEvent:Connect(function(payload)
         self:ApplyHUDUpdate(payload)
     end)
@@ -115,7 +111,6 @@ function UIController:KnitStart()
 
     Net:GetEvent("Result").OnClientEvent:Connect(function(summary)
         self:WithHUD("ShowMessage", "Session ended: " .. tostring(summary.Reason))
-        self.ResultScreen:Show(summary)
     end)
 
     Net:GetEvent("DashCooldown").OnClientEvent:Connect(function(data)
