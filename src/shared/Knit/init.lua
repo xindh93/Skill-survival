@@ -54,6 +54,14 @@ function Knit.GetService(name: string)
     return service
 end
 
+function Knit.GetController(name: string)
+    local controller = Knit.Controllers[name]
+    if not controller then
+        error("[Knit] Controller not found: " .. tostring(name))
+    end
+    return controller
+end
+
 function Knit.CreateController(controllerDef)
     assert(not isServer, "Knit.CreateController can only be used on the client")
     assert(controllerDef and controllerDef.Name, "Controller definition requires a Name")
