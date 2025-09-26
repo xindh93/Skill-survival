@@ -667,7 +667,7 @@ function HUDController:UpdateSkillCooldowns(skillTable)
     local remaining = resolveRemainingTime(info, cooldown)
 
     if remaining > 0.05 then
-        cooldownLabel.Text = tostring(math.max(1, math.ceil(remaining)))
+        cooldownLabel.Text = tostring(math.ceil(remaining))
         cooldownLabel.TextColor3 = Color3.new(1, 1, 1)
         cooldownLabel.TextStrokeTransparency = 0.6
         cooldownLabel.Visible = true
@@ -696,7 +696,7 @@ function HUDController:UpdateDashCooldown(dashData)
         dashCooldownLabel.TextStrokeTransparency = 0.6
         dashCooldownLabel.Visible = true
     else
-        dashCooldownLabel.Text = tostring(math.max(1, math.ceil(remaining)))
+        dashCooldownLabel.Text = tostring(math.ceil(remaining))
         dashCooldownLabel.TextColor3 = Color3.new(1, 1, 1)
         dashCooldownLabel.TextStrokeTransparency = 0.6
         dashCooldownLabel.Visible = true
