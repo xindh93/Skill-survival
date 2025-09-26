@@ -35,7 +35,6 @@ end
 
 function HUDController:KnitInit()
     self.Elements = {}
-    self.PartyEntries = {}
     self.LastMessageTask = nil
     self.AlertTasks = {}
     self.InterfaceSignal = Instance.new("BindableEvent")
@@ -161,7 +160,6 @@ function HUDController:CaptureInterfaceElements(screen: ScreenGui, abilityConfig
         warn("HUDController: SafeFrame missing from HUD")
         self.Screen = screen
         self.Elements = {}
-        self.PartyEntries = {}
         if self.InterfaceSignal then
             self.InterfaceSignal:Fire(screen)
         end
@@ -188,9 +186,6 @@ function HUDController:CaptureInterfaceElements(screen: ScreenGui, abilityConfig
     local reservedAlert = alertArea and alertArea:FindFirstChild("ReservedAlerts")
     local reservedLabel = reservedAlert and reservedAlert:FindFirstChild("ReservedLabel")
 
-    local partyContainer = safeFrame:FindFirstChild("PartyContainer")
-    local partyEmptyLabel = partyContainer and partyContainer:FindFirstChild("PartyEmptyLabel")
-
     local abilityFrame = safeFrame:FindFirstChild("AbilityFrame")
     local skillSlot = abilityFrame and abilityFrame:FindFirstChild("SkillSlot")
     local dashSlot = abilityFrame and abilityFrame:FindFirstChild("DashSlot")
@@ -202,7 +197,6 @@ function HUDController:CaptureInterfaceElements(screen: ScreenGui, abilityConfig
         warn("HUDController: Ability slots missing or malformed")
         self.Screen = screen
         self.Elements = {}
-        self.PartyEntries = {}
         if self.InterfaceSignal then
             self.InterfaceSignal:Fire(screen)
         end
@@ -333,8 +327,16 @@ function HUDController:CaptureInterfaceElements(screen: ScreenGui, abilityConfig
     end
 
     if alertArea then
-        alertArea.Position = UDim2.new(0, sidePanelWidth + sectionSpacing, 0, uiConfig.AlertAreaOffset or 12)
-        alertArea.Size = UDim2.new(1, -(sidePanelWidth + sectionSpacing), 0, uiConfig.AlertAreaHeight or 160)
+        local alertOffset = sidePanelWidth + sectionSpacing
+        local totalPadding = alertOffset * 2
+        local alertHeight = uiConfig.AlertAreaHeight or 160
+        alertArea.AnchorPoint = Vector2.new(0.5, 0)
+        alertArea.Position = UDim2.new(0.5, 0, 0, uiConfig.AlertAreaOffset or 12)
+        if safeFrame.AbsoluteSize.X > 0 and safeFrame.AbsoluteSize.X - totalPadding < (uiConfig.AlertAreaMinWidth or 240) then
+            alertArea.Size = UDim2.new(0, math.max(uiConfig.AlertAreaMinWidth or 240, safeFrame.AbsoluteSize.X - totalPadding), 0, alertHeight)
+        else
+            alertArea.Size = UDim2.new(1, -totalPadding, 0, alertHeight)
+        end
         local alertLayout = alertArea:FindFirstChildWhichIsA("UIListLayout")
         if alertLayout then
             alertLayout.Padding = UDim.new(0, uiConfig.AlertPadding or 8)
@@ -348,8 +350,7 @@ function HUDController:CaptureInterfaceElements(screen: ScreenGui, abilityConfig
             messageLabel.Size = UDim2.new(1, 0, 0, uiConfig.MessageHeight or 40)
         end
         if reservedAlert then
-            reservedAlert.BackgroundColor3 = uiConfig.AlertBackgroundColor or panelBackground
-            reservedAlert.BackgroundTransparency = uiConfig.AlertBackgroundTransparency or 0.35
+            reservedAlert.BackgroundTransparency = 1
             reservedAlert.Size = UDim2.new(1, 0, 0, uiConfig.ReservedAlertHeight or 52)
             local reservedCorner = reservedAlert:FindFirstChildWhichIsA("UICorner")
             if reservedCorner then
@@ -358,18 +359,6 @@ function HUDController:CaptureInterfaceElements(screen: ScreenGui, abilityConfig
         end
         if reservedLabel then
             reservedLabel.TextSize = alertTextSize
-        end
-    end
-
-    if partyContainer then
-        partyContainer.Size = UDim2.new(0, uiConfig.Party and uiConfig.Party.Width or 220, 0, 10)
-        partyContainer.Position = UDim2.new(1, 0, 0, sectionSpacing)
-        local partyLayout = partyContainer:FindFirstChildWhichIsA("UIListLayout")
-        if partyLayout then
-            partyLayout.Padding = UDim.new(0, uiConfig.Party and uiConfig.Party.Padding or 6)
-        end
-        if partyEmptyLabel then
-            partyEmptyLabel.TextSize = uiConfig.Party and uiConfig.Party.NameTextSize or smallTextSize
         end
     end
 
@@ -398,8 +387,8 @@ function HUDController:CaptureInterfaceElements(screen: ScreenGui, abilityConfig
         skillStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
     end
     if skill.Fill then
-        skill.Fill.BackgroundColor3 = abilityConfig.SkillFillColor or Color3.fromRGB(255, 196, 110)
-        skill.Fill.BackgroundTransparency = abilityConfig.SkillFillTransparency or 0.15
+        skill.Fill.Visible = false
+        skill.Fill.BackgroundTransparency = 1
     end
 
     dash.Gauge.BackgroundColor3 = dashConfig.BackgroundColor or Color3.fromRGB(18, 24, 32)
@@ -412,8 +401,8 @@ function HUDController:CaptureInterfaceElements(screen: ScreenGui, abilityConfig
         dashStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
     end
     if dash.Fill then
-        dash.Fill.BackgroundColor3 = dashConfig.FillColor or Color3.fromRGB(120, 200, 255)
-        dash.Fill.BackgroundTransparency = dashConfig.FillTransparency or 0.15
+        dash.Fill.Visible = false
+        dash.Fill.BackgroundTransparency = 1
     end
 
     self.Screen = screen
@@ -431,38 +420,23 @@ function HUDController:CaptureInterfaceElements(screen: ScreenGui, abilityConfig
     dash.CooldownLabel.Text = self.DashReadyText
     dash.CooldownLabel.TextColor3 = self.DashReadyColor
 
-    if self.PartyEntries then
-        for key, entry in pairs(self.PartyEntries) do
-            if typeof(entry) == "table" and entry.Frame then
-                entry.Frame:Destroy()
-            end
-            self.PartyEntries[key] = nil
-        end
-    end
-
     self.Elements = {
         WaveLabel = waveLabel,
         EnemyLabel = enemyLabel,
         TimerLabel = timerLabel,
         GoldLabel = goldLabel,
-        SkillFill = skill.Fill,
         SkillCooldownLabel = skill.CooldownLabel,
         SkillKeyLabel = skill.KeyLabel,
-        DashFill = dash.Fill,
         DashCooldownLabel = dash.CooldownLabel,
         MessageLabel = messageLabel,
         WaveAnnouncement = waveAnnouncement,
         ReservedAlert = reservedAlert,
         ReservedAlertLabel = reservedLabel,
-        PartyContainer = partyContainer,
-        PartyEmptyLabel = partyEmptyLabel,
         XPFill = xpFill,
         XPTextLabel = xpLabel,
         LevelLabel = levelLabel,
         XPBar = xpBar,
     }
-
-    self.PartyEntries = {}
 
     if self.InterfaceSignal then
         self.InterfaceSignal:Fire(screen)
@@ -530,7 +504,6 @@ function HUDController:Update(state)
     self:UpdateXP(state)
     self:UpdateSkillCooldowns(state.SkillCooldowns)
     self:UpdateDashCooldown(state.DashCooldown)
-    self:UpdateParty(state.Party)
 end
 
 function HUDController:UpdateXP(state)
@@ -606,10 +579,9 @@ function HUDController:UpdateXP(state)
 end
 
 function HUDController:UpdateSkillCooldowns(skillTable)
-    local skillFill = self.Elements.SkillFill
     local cooldownLabel = self.Elements.SkillCooldownLabel
     local keyLabel = self.Elements.SkillKeyLabel
-    if not skillFill or not cooldownLabel then
+    if not cooldownLabel then
         return
     end
 
@@ -669,19 +641,8 @@ function HUDController:UpdateSkillCooldowns(skillTable)
         end
     end
 
-    local progress
-    if cooldown > 0 then
-        progress = 1 - math.clamp(remaining / cooldown, 0, 1)
-    elseif remaining > 0 then
-        progress = 0
-    else
-        progress = 1
-    end
-
-    skillFill.Size = UDim2.new(1, 0, progress, 0)
-
     if remaining > 0.05 then
-        cooldownLabel.Text = string.format("%.1f", remaining)
+        cooldownLabel.Text = tostring(math.ceil(remaining))
         cooldownLabel.TextColor3 = Color3.new(1, 1, 1)
     else
         cooldownLabel.Text = readyText
@@ -690,19 +651,14 @@ function HUDController:UpdateSkillCooldowns(skillTable)
 end
 
 function HUDController:UpdateDashCooldown(dashData)
-    local dashFill = self.Elements.DashFill
     local dashCooldownLabel = self.Elements.DashCooldownLabel
-    if not dashFill or not dashCooldownLabel then
+    if not dashCooldownLabel then
         return
     end
 
     local remaining = 0
-    local cooldown = 0
 
     if typeof(dashData) == "table" then
-        if typeof(dashData.Cooldown) == "number" then
-            cooldown = math.max(0, dashData.Cooldown)
-        end
         if typeof(dashData.ReadyTime) == "number" then
             local now = Workspace:GetServerTimeNow()
             remaining = math.max(0, dashData.ReadyTime - now)
@@ -711,17 +667,6 @@ function HUDController:UpdateDashCooldown(dashData)
         end
     end
 
-    local progress
-    if cooldown > 0 then
-        progress = 1 - math.clamp(remaining / cooldown, 0, 1)
-    elseif remaining > 0 then
-        progress = 0
-    else
-        progress = 1
-    end
-
-    dashFill.Size = UDim2.new(1, 0, progress, 0)
-
     local readyText = self.DashReadyText or "Ready"
     local readyColor = self.DashReadyColor or Color3.fromRGB(180, 255, 205)
 
@@ -729,173 +674,8 @@ function HUDController:UpdateDashCooldown(dashData)
         dashCooldownLabel.Text = readyText
         dashCooldownLabel.TextColor3 = readyColor
     else
-        dashCooldownLabel.Text = string.format("%.1f", remaining)
+        dashCooldownLabel.Text = tostring(math.ceil(remaining))
         dashCooldownLabel.TextColor3 = Color3.new(1, 1, 1)
-    end
-end
-
-function HUDController:UpdateParty(partyState)
-    local container = self.Elements.PartyContainer
-    if not container then
-        return
-    end
-
-    local entries = self.PartyEntries
-    local order = 0
-    local used = {}
-
-    local list = {}
-    if typeof(partyState) == "table" then
-        if #partyState > 0 then
-            for index, item in ipairs(partyState) do
-                table.insert(list, item)
-            end
-        else
-            for _, item in pairs(partyState) do
-                table.insert(list, item)
-            end
-            table.sort(list, function(a, b)
-                local aOrder = typeof(a) == "table" and (a.Order or a.Index or 0) or 0
-                local bOrder = typeof(b) == "table" and (b.Order or b.Index or 0) or 0
-                return aOrder < bOrder
-            end)
-        end
-    end
-
-    for _, data in ipairs(list) do
-        local key = nil
-        if typeof(data) == "table" then
-            if data.Id then
-                key = tostring(data.Id)
-            elseif data.UserId then
-                key = tostring(data.UserId)
-            elseif data.Name then
-                key = string.lower(data.Name)
-            end
-        end
-        key = key or tostring(order)
-
-        local entry = entries[key]
-        if not entry then
-            entry = self:CreatePartyEntry(container)
-            entries[key] = entry
-        end
-
-        order += 1
-        entry.Frame.LayoutOrder = order
-        self:ApplyPartyEntry(entry, data)
-        entry.Frame.Visible = true
-        used[key] = true
-    end
-
-    for key, entry in pairs(entries) do
-        if not used[key] then
-            entry.Frame.Visible = false
-        end
-    end
-
-    if order == 0 and self.Elements.PartyEmptyLabel then
-        self.Elements.PartyEmptyLabel.Text = Config.UI.Party and Config.UI.Party.EmptyText or ""
-        self.Elements.PartyEmptyLabel.Visible = (self.Elements.PartyEmptyLabel.Text ~= "")
-    elseif self.Elements.PartyEmptyLabel then
-        self.Elements.PartyEmptyLabel.Visible = false
-    end
-end
-
-function HUDController:CreatePartyEntry(parent: Instance)
-    local partyConfig = Config.UI and Config.UI.Party or {}
-    local entryHeight = partyConfig.EntryHeight or 42
-    local entry = Instance.new("Frame")
-    entry.Name = "PartyEntry"
-    entry.BackgroundColor3 = partyConfig.BackgroundColor or Color3.fromRGB(18, 24, 32)
-    entry.BackgroundTransparency = partyConfig.BackgroundTransparency or 0.25
-    entry.BorderSizePixel = 0
-    entry.Size = UDim2.new(1, 0, 0, entryHeight)
-    entry.Visible = false
-    entry.Parent = parent
-
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, partyConfig.CornerRadius or 8)
-    corner.Parent = entry
-
-    local stroke = Instance.new("UIStroke")
-    stroke.Thickness = partyConfig.StrokeThickness or 1.5
-    stroke.Color = partyConfig.StrokeColor or Color3.fromRGB(90, 120, 150)
-    stroke.Transparency = partyConfig.StrokeTransparency or 0.35
-    stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    stroke.Parent = entry
-
-    local fill = Instance.new("Frame")
-    fill.Name = "HealthFill"
-    fill.BackgroundColor3 = partyConfig.HealthFillColor or Color3.fromRGB(88, 255, 120)
-    fill.BackgroundTransparency = partyConfig.HealthFillTransparency or 0.25
-    fill.BorderSizePixel = 0
-    fill.Size = UDim2.new(0, 0, 1, 0)
-    fill.Parent = entry
-
-    local fillCorner = Instance.new("UICorner")
-    fillCorner.CornerRadius = UDim.new(0, partyConfig.CornerRadius or 8)
-    fillCorner.Parent = fill
-
-    local nameLabel = createTextLabel(entry, "", Config.UI and (Config.UI.Party and Config.UI.Party.Font or Config.UI.Font) or Enum.Font.Gotham, partyConfig.NameTextSize or 16, Enum.TextXAlignment.Left)
-    nameLabel.Position = UDim2.new(0, 10, 0, 0)
-    nameLabel.Size = UDim2.new(0.5, -10, 1, 0)
-
-    local healthLabel = createTextLabel(entry, "", Config.UI and (Config.UI.Party and Config.UI.Party.Font or Config.UI.Font) or Enum.Font.Gotham, partyConfig.HealthTextSize or 16, Enum.TextXAlignment.Right)
-    healthLabel.AnchorPoint = Vector2.new(1, 0)
-    healthLabel.Position = UDim2.new(1, -10, 0, 0)
-    healthLabel.Size = UDim2.new(0.5, 0, 1, 0)
-
-    return {
-        Frame = entry,
-        HealthFill = fill,
-        NameLabel = nameLabel,
-        HealthLabel = healthLabel,
-    }
-end
-
-function HUDController:ApplyPartyEntry(entry, data)
-    local name = "Player"
-    local health = 0
-    local maxHealth = 0
-
-    if typeof(data) == "table" then
-        name = data.DisplayName or data.Name or name
-        health = data.Health or data.Current or data.Value or health
-        maxHealth = data.MaxHealth or data.Max or data.Capacity or maxHealth
-        if data.UserId == Players.LocalPlayer.UserId or data.IsLocal then
-            entry.Frame.BackgroundTransparency = 0.18
-        else
-            entry.Frame.BackgroundTransparency = Config.UI and Config.UI.Party and Config.UI.Party.BackgroundTransparency or 0.25
-        end
-    end
-
-    entry.NameLabel.Text = name
-
-    local ratio = 0
-    if typeof(health) == "number" then
-        health = math.max(0, health)
-    else
-        health = 0
-    end
-    if typeof(maxHealth) == "number" and maxHealth > 0 then
-        maxHealth = math.max(maxHealth, health, 1)
-        ratio = math.clamp(health / maxHealth, 0, 1)
-    elseif typeof(data) == "table" and typeof(data.Ratio) == "number" then
-        ratio = math.clamp(data.Ratio, 0, 1)
-        if maxHealth <= 0 then
-            maxHealth = math.floor(health / math.max(ratio, 0.0001))
-        end
-    end
-
-    entry.HealthFill.Size = UDim2.new(ratio, 0, 1, 0)
-
-    if maxHealth > 0 then
-        entry.HealthLabel.Text = string.format("%d / %d", math.floor(health + 0.5), math.floor(maxHealth + 0.5))
-    elseif ratio > 0 then
-        entry.HealthLabel.Text = string.format("%d%%", math.floor(ratio * 100 + 0.5))
-    else
-        entry.HealthLabel.Text = "--"
     end
 end
 
