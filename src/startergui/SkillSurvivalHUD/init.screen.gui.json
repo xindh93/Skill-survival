@@ -327,7 +327,7 @@
               "$properties": {
                 "Name": "ReservedAlerts",
                 "BackgroundColor3": { "Color3": [0.070588, 0.094117, 0.12549] },
-                "BackgroundTransparency": 0.35,
+                "BackgroundTransparency": 1,
                 "BorderSizePixel": 0,
                 "Size": { "UDim2": [1, 0, 0, 56] },
                 "LayoutOrder": 0

@@ -5,7 +5,6 @@
     "ReplicatedStorage": { "Shared": { "$path": "src/shared" } },
     "ServerScriptService": { "Server": { "$path": "src/server" } },
     "StarterGui": {
-      "ResultScreen": { "$path": "src/startergui/ResultScreen" },
       "SkillSurvivalHUD": { "$path": "src/startergui/SkillSurvivalHUD" }
     },
     "StarterPlayer": {
