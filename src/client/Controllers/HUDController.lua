@@ -486,9 +486,11 @@ function HUDController:Update(state)
     self.Elements.EnemyLabel.Text = string.format("Enemies: %d", enemies)
 
     if state.Countdown and state.Countdown > 0 then
-        self.Elements.TimerLabel.Text = string.format("Start In: %ds", math.ceil(state.Countdown))
+        local countdown = math.max(0, state.Countdown)
+        local rounded = math.floor((countdown * 10) + 0.5) / 10
+        self.Elements.TimerLabel.Text = string.format("Time: %.1fs", rounded)
     elseif state.TimeRemaining and state.TimeRemaining >= 0 then
-        self.Elements.TimerLabel.Text = "Time Left: " .. formatTime(state.TimeRemaining)
+        self.Elements.TimerLabel.Text = "Time: " .. formatTime(state.TimeRemaining)
     else
         self.Elements.TimerLabel.Text = "Time: ∞"
     end
@@ -517,6 +519,14 @@ function HUDController:UpdateXP(state)
 
     local xpConfig = Config.UI and Config.UI.XP or {}
     local prefix = xpConfig.LabelPrefix or "XP"
+    prefix = string.gsub(prefix, "^%s+", "")
+    prefix = string.gsub(prefix, "%s+$", "")
+    local function composeXPText(valueText: string): string
+        if prefix ~= "" then
+            return string.format("%s %s", prefix, valueText)
+        end
+        return valueText
+    end
     prefix = string.gsub(prefix, "%s+$", "")
 
     local levelValue = tonumber(state.Level)
@@ -569,6 +579,13 @@ function HUDController:UpdateXP(state)
     xpFill.Size = UDim2.new(math.clamp(ratio, 0, 1), 0, 1, 0)
 
     if required > 0 then
+        xpLabel.Text = composeXPText(string.format("%d/%d", math.floor(current + 0.5), math.floor(required + 0.5)))
+    elseif ratio > 0 then
+        xpLabel.Text = composeXPText(string.format("%d%%", math.floor(ratio * 100 + 0.5)))
+    elseif typeof(totalXP) == "number" then
+        xpLabel.Text = composeXPText(string.format("%d", math.floor(totalXP + 0.5)))
+    else
+        xpLabel.Text = composeXPText("0")
         xpLabel.Text = string.format("%s%d/%d", prefix, math.floor(current + 0.5), math.floor(required + 0.5))
     elseif ratio > 0 then
         xpLabel.Text = string.format("%s%d%%", prefix, math.floor(ratio * 100 + 0.5))
