@@ -195,19 +195,13 @@
                     "LayoutOrder": 1
                   },
                   "$children": {
-                    "XPText": {
-                      "$className": "TextLabel",
+                    "UIListLayout": {
+                      "$className": "UIListLayout",
                       "$properties": {
-                        "Name": "XPText",
-                        "BackgroundTransparency": 1,
-                        "Font": "Gotham",
-                        "Text": "XP 0",
-                        "TextSize": 18,
-                        "TextColor3": { "Color3": [1, 1, 1] },
-                        "TextStrokeTransparency": 0.6,
-                        "TextXAlignment": "Left",
-                        "TextYAlignment": "Center",
-                        "Size": { "UDim2": [1, -72, 1, 0] }
+                        "FillDirection": "Horizontal",
+                        "HorizontalAlignment": "Left",
+                        "VerticalAlignment": "Center",
+                        "Padding": { "UDim": [0, 8] }
                       }
                     },
                     "LevelLabel": {
@@ -216,15 +210,30 @@
                         "Name": "LevelLabel",
                         "BackgroundTransparency": 1,
                         "Font": "GothamBold",
-                        "Text": "Lv 1",
+                        "Text": "Lv1",
                         "TextSize": 24,
+                        "TextColor3": { "Color3": [1, 1, 1] },
+                        "TextStrokeTransparency": 0.6,
+                        "TextXAlignment": "Left",
+                        "TextYAlignment": "Center",
+                        "Size": { "UDim2": [0, 72, 1, 0] },
+                        "LayoutOrder": 1
+                      }
+                    },
+                    "XPText": {
+                      "$className": "TextLabel",
+                      "$properties": {
+                        "Name": "XPText",
+                        "BackgroundTransparency": 1,
+                        "Font": "Gotham",
+                        "Text": "XP0",
+                        "TextSize": 18,
                         "TextColor3": { "Color3": [1, 1, 1] },
                         "TextStrokeTransparency": 0.6,
                         "TextXAlignment": "Right",
                         "TextYAlignment": "Center",
-                        "AnchorPoint": { "Vector2": [1, 0.5] },
-                        "Position": { "UDim2": [1, 0, 0.5, 0] },
-                        "Size": { "UDim2": [0, 60, 1, 0] }
+                        "Size": { "UDim2": [1, -80, 1, 0] },
+                        "LayoutOrder": 2
                       }
                     }
                   }
@@ -414,43 +423,6 @@
                             "ApplyStrokeMode": "Border"
                           }
                         },
-                        "Mask": {
-                          "$className": "Frame",
-                          "$properties": {
-                            "Name": "Mask",
-                            "BackgroundTransparency": 1,
-                            "Size": { "UDim2": [1, 0, 1, 0] },
-                            "ClipsDescendants": true
-                          },
-                          "$children": {
-                            "UICorner": {
-                              "$className": "UICorner",
-                              "$properties": {
-                                "CornerRadius": { "UDim": [1, 0] }
-                              }
-                            },
-                            "Fill": {
-                              "$className": "Frame",
-                              "$properties": {
-                                "Name": "Fill",
-                                "BackgroundColor3": { "Color3": [1, 0.768627, 0.431373] },
-                                "BackgroundTransparency": 0.15,
-                                "BorderSizePixel": 0,
-                                "AnchorPoint": { "Vector2": [0, 1] },
-                                "Position": { "UDim2": [0, 0, 1, 0] },
-                                "Size": { "UDim2": [1, 0, 1, 0] }
-                              },
-                              "$children": {
-                                "UICorner": {
-                                  "$className": "UICorner",
-                                  "$properties": {
-                                    "CornerRadius": { "UDim": [1, 0] }
-                                  }
-                                }
-                              }
-                            }
-                          }
-                        },
                         "KeyLabel": {
                           "$className": "TextLabel",
                           "$properties": {
@@ -527,43 +499,6 @@
                             "Color": { "Color3": [0.470588, 0.784314, 1] },
                             "Transparency": 0.2,
                             "ApplyStrokeMode": "Border"
-                          }
-                        },
-                        "Mask": {
-                          "$className": "Frame",
-                          "$properties": {
-                            "Name": "Mask",
-                            "BackgroundTransparency": 1,
-                            "Size": { "UDim2": [1, 0, 1, 0] },
-                            "ClipsDescendants": true
-                          },
-                          "$children": {
-                            "UICorner": {
-                              "$className": "UICorner",
-                              "$properties": {
-                                "CornerRadius": { "UDim": [1, 0] }
-                              }
-                            },
-                            "Fill": {
-                              "$className": "Frame",
-                              "$properties": {
-                                "Name": "Fill",
-                                "BackgroundColor3": { "Color3": [0.470588, 0.784314, 1] },
-                                "BackgroundTransparency": 0.15,
-                                "BorderSizePixel": 0,
-                                "AnchorPoint": { "Vector2": [0, 1] },
-                                "Position": { "UDim2": [0, 0, 1, 0] },
-                                "Size": { "UDim2": [1, 0, 1, 0] }
-                              },
-                              "$children": {
-                                "UICorner": {
-                                  "$className": "UICorner",
-                                  "$properties": {
-                                    "CornerRadius": { "UDim": [1, 0] }
-                                  }
-                                }
-                              }
-                            }
                           }
                         },
                         "KeyLabel": {
