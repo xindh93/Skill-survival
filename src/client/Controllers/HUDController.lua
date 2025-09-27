@@ -197,6 +197,7 @@ function HUDController:CaptureInterfaceElements(screen: ScreenGui, abilityConfig
     local xpFill = xpBar and xpBar:FindFirstChild("Fill")
 
     local alertArea = safeFrame:FindFirstChild("AlertArea")
+    local countdownLabel = alertArea and alertArea:FindFirstChild("CountdownLabel")
     local waveAnnouncement = alertArea and alertArea:FindFirstChild("WaveAnnouncement")
     local messageLabel = alertArea and alertArea:FindFirstChild("MessageLabel")
     local reservedAlert = alertArea and alertArea:FindFirstChild("ReservedAlerts")
@@ -477,6 +478,7 @@ function HUDController:CaptureInterfaceElements(screen: ScreenGui, abilityConfig
         DashCooldownLabel = dash and dash.CooldownLabel or nil,
         MessageLabel = messageLabel,
         WaveAnnouncement = waveAnnouncement,
+        CountdownLabel = countdownLabel,
         ReservedAlert = reservedAlert,
         ReservedAlertLabel = reservedLabel,
         XPFill = xpFill,
@@ -532,8 +534,26 @@ function HUDController:Update(state)
     end
     self.Elements.EnemyLabel.Text = string.format("Enemies: %d", enemies)
 
-    if state.Countdown and state.Countdown > 0 then
-        local countdown = math.max(0, state.Countdown)
+    local countdownValue = typeof(state.Countdown) == "number" and state.Countdown or 0
+    local countdownLabel = self.Elements.CountdownLabel
+    local isPreparing = state.State == "Prepare" and countdownValue > 0
+
+    if countdownLabel then
+        countdownLabel.Visible = false
+        countdownLabel.TextTransparency = 1
+        countdownLabel.Text = ""
+    end
+
+    if isPreparing then
+        local displayCountdown = math.max(0, math.floor(countdownValue + 0.5))
+        self.Elements.TimerLabel.Text = string.format("Start in: %ds", displayCountdown)
+        if countdownLabel then
+            countdownLabel.Text = string.format("Wave starts in: %ds", displayCountdown)
+            countdownLabel.Visible = true
+            countdownLabel.TextTransparency = 0
+        end
+    elseif countdownValue and countdownValue > 0 then
+        local countdown = math.max(0, countdownValue)
         local rounded = math.floor((countdown * 10) + 0.5) / 10
         self.Elements.TimerLabel.Text = string.format("Time: %.1fs", rounded)
     elseif state.TimeRemaining and state.TimeRemaining >= 0 then
