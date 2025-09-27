@@ -481,36 +481,6 @@ local function formatTime(seconds: number): string
     return string.format("%02d:%02d", minutes, remaining)
 end
 
-local function resolveRemainingTime(entry, cooldown)
-    if typeof(entry) ~= "table" then
-        return 0
-    end
-
-    local remaining = 0
-    local now = Workspace:GetServerTimeNow()
-
-    if typeof(entry.ReadyTime) == "number" then
-        remaining = math.max(remaining, entry.ReadyTime - now)
-    end
-
-    if typeof(entry.EndTime) == "number" then
-        remaining = math.max(remaining, entry.EndTime - now)
-    end
-
-    if typeof(entry.Remaining) == "number" then
-        remaining = math.max(remaining, entry.Remaining)
-    end
-
-    if remaining <= 0 and typeof(entry.Timestamp) == "number" and typeof(cooldown) == "number" and cooldown > 0 then
-        local elapsed = now - entry.Timestamp
-        if elapsed < cooldown then
-            remaining = math.max(0, cooldown - elapsed)
-        end
-    end
-
-    return math.max(0, remaining)
-end
-
 function HUDController:Update(state)
     if not self.Elements.WaveLabel then
         return
@@ -660,11 +630,29 @@ function HUDController:UpdateSkillCooldowns(skillTable)
     local readyColor = self.SkillReadyColor or Color3.fromRGB(255, 235, 200)
 
     local cooldown = 0
-    if typeof(info) == "table" and typeof(info.Cooldown) == "number" then
-        cooldown = math.max(0, info.Cooldown)
-    end
+    local remaining = 0
 
-    local remaining = resolveRemainingTime(info, cooldown)
+    if info and typeof(info) == "table" then
+        if typeof(info.Cooldown) == "number" then
+            cooldown = math.max(0, info.Cooldown)
+        end
+
+        if typeof(info.ReadyTime) == "number" then
+            local now = Workspace:GetServerTimeNow()
+            remaining = math.max(0, info.ReadyTime - now)
+        elseif typeof(info.Remaining) == "number" then
+            remaining = math.max(0, info.Remaining)
+        elseif typeof(info.Timestamp) == "number" then
+            local now = Workspace:GetServerTimeNow()
+            local endTime = info.EndTime
+            if typeof(endTime) == "number" then
+                remaining = math.max(0, endTime - now)
+            else
+                local elapsed = now - info.Timestamp
+                remaining = math.max(0, cooldown - elapsed)
+            end
+        end
+    end
 
     if remaining > 0.05 then
         cooldownLabel.Text = tostring(math.ceil(remaining))
@@ -685,7 +673,16 @@ function HUDController:UpdateDashCooldown(dashData)
         return
     end
 
-    local remaining = resolveRemainingTime(dashData, typeof(dashData) == "table" and dashData.Cooldown or 0)
+    local remaining = 0
+
+    if typeof(dashData) == "table" then
+        if typeof(dashData.ReadyTime) == "number" then
+            local now = Workspace:GetServerTimeNow()
+            remaining = math.max(0, dashData.ReadyTime - now)
+        elseif typeof(dashData.Remaining) == "number" then
+            remaining = math.max(0, dashData.Remaining)
+        end
+    end
 
     local readyText = self.DashReadyText or "Ready"
     local readyColor = self.DashReadyColor or Color3.fromRGB(180, 255, 205)
