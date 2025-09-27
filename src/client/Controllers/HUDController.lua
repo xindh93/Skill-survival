@@ -451,7 +451,7 @@ function HUDController:CaptureInterfaceElements(screen: ScreenGui, abilityConfig
     self.SkillDisplayKey = abilityConfig.SkillKey or "Q"
     local skillReadyText = abilityConfig.SkillReadyText
     if skillReadyText == nil then
-        skillReadyText = "0.0"
+        skillReadyText = "ready"
     else
         skillReadyText = tostring(skillReadyText)
     end
@@ -460,7 +460,7 @@ function HUDController:CaptureInterfaceElements(screen: ScreenGui, abilityConfig
     self.PrimarySkillId = abilityConfig.PrimarySkillId or "AOE_Blast"
     local dashReadyText = dashConfig.ReadyText
     if dashReadyText == nil then
-        dashReadyText = "0.0"
+        dashReadyText = "ready"
     else
         dashReadyText = tostring(dashReadyText)
     end
@@ -692,10 +692,12 @@ function HUDController:UpdateXP(state)
     end
 
     local levelValue = tonumber(state.Level)
+    local levelPrefixJoiner = levelJoiner ~= "" and levelJoiner or ""
+
     if levelValue then
-        levelLabel.Text = string.format("Lv%s%d", levelJoiner, math.max(1, math.floor(levelValue + 0.5)))
+        levelLabel.Text = string.format("Lv%s %d", levelPrefixJoiner, math.max(1, math.floor(levelValue + 0.5)))
     else
-        levelLabel.Text = string.format("Lv%s1", levelJoiner)
+        levelLabel.Text = string.format("Lv%s %d", levelPrefixJoiner, 1)
     end
 
     local progress = state.XPProgress
