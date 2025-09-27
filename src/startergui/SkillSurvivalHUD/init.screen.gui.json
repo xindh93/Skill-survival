@@ -195,6 +195,15 @@
                     "LayoutOrder": 1
                   },
                   "$children": {
+                    "UIListLayout": {
+                      "$className": "UIListLayout",
+                      "$properties": {
+                        "FillDirection": "Horizontal",
+                        "HorizontalAlignment": "Left",
+                        "VerticalAlignment": "Center",
+                        "Padding": { "UDim": [0, 8] }
+                      }
+                    },
                     "XPText": {
                       "$className": "TextLabel",
                       "$properties": {
@@ -207,7 +216,8 @@
                         "TextStrokeTransparency": 0.6,
                         "TextXAlignment": "Left",
                         "TextYAlignment": "Center",
-                        "Size": { "UDim2": [1, -72, 1, 0] }
+                        "Size": { "UDim2": [1, -88, 1, 0] },
+                        "LayoutOrder": 1
                       }
                     },
                     "LevelLabel": {
@@ -222,9 +232,8 @@
                         "TextStrokeTransparency": 0.6,
                         "TextXAlignment": "Right",
                         "TextYAlignment": "Center",
-                        "AnchorPoint": { "Vector2": [1, 0.5] },
-                        "Position": { "UDim2": [1, 0, 0.5, 0] },
-                        "Size": { "UDim2": [0, 60, 1, 0] }
+                        "Size": { "UDim2": [0, 80, 1, 0] },
+                        "LayoutOrder": 2
                       }
                     }
                   }
@@ -414,43 +423,6 @@
                             "ApplyStrokeMode": "Border"
                           }
                         },
-                        "Mask": {
-                          "$className": "Frame",
-                          "$properties": {
-                            "Name": "Mask",
-                            "BackgroundTransparency": 1,
-                            "Size": { "UDim2": [1, 0, 1, 0] },
-                            "ClipsDescendants": true
-                          },
-                          "$children": {
-                            "UICorner": {
-                              "$className": "UICorner",
-                              "$properties": {
-                                "CornerRadius": { "UDim": [1, 0] }
-                              }
-                            },
-                            "Fill": {
-                              "$className": "Frame",
-                              "$properties": {
-                                "Name": "Fill",
-                                "BackgroundColor3": { "Color3": [1, 0.768627, 0.431373] },
-                                "BackgroundTransparency": 0.15,
-                                "BorderSizePixel": 0,
-                                "AnchorPoint": { "Vector2": [0, 1] },
-                                "Position": { "UDim2": [0, 0, 1, 0] },
-                                "Size": { "UDim2": [1, 0, 1, 0] }
-                              },
-                              "$children": {
-                                "UICorner": {
-                                  "$className": "UICorner",
-                                  "$properties": {
-                                    "CornerRadius": { "UDim": [1, 0] }
-                                  }
-                                }
-                              }
-                            }
-                          }
-                        },
                         "KeyLabel": {
                           "$className": "TextLabel",
                           "$properties": {
@@ -472,7 +444,7 @@
                             "Name": "CooldownLabel",
                             "BackgroundTransparency": 1,
                             "Font": "GothamBold",
-                            "Text": "Ready",
+                            "Text": "0.0",
                             "TextColor3": { "Color3": [1, 0.921569, 0.784314] },
                             "TextScaled": true,
                             "TextXAlignment": "Center",
@@ -529,43 +501,6 @@
                             "ApplyStrokeMode": "Border"
                           }
                         },
-                        "Mask": {
-                          "$className": "Frame",
-                          "$properties": {
-                            "Name": "Mask",
-                            "BackgroundTransparency": 1,
-                            "Size": { "UDim2": [1, 0, 1, 0] },
-                            "ClipsDescendants": true
-                          },
-                          "$children": {
-                            "UICorner": {
-                              "$className": "UICorner",
-                              "$properties": {
-                                "CornerRadius": { "UDim": [1, 0] }
-                              }
-                            },
-                            "Fill": {
-                              "$className": "Frame",
-                              "$properties": {
-                                "Name": "Fill",
-                                "BackgroundColor3": { "Color3": [0.470588, 0.784314, 1] },
-                                "BackgroundTransparency": 0.15,
-                                "BorderSizePixel": 0,
-                                "AnchorPoint": { "Vector2": [0, 1] },
-                                "Position": { "UDim2": [0, 0, 1, 0] },
-                                "Size": { "UDim2": [1, 0, 1, 0] }
-                              },
-                              "$children": {
-                                "UICorner": {
-                                  "$className": "UICorner",
-                                  "$properties": {
-                                    "CornerRadius": { "UDim": [1, 0] }
-                                  }
-                                }
-                              }
-                            }
-                          }
-                        },
                         "KeyLabel": {
                           "$className": "TextLabel",
                           "$properties": {
@@ -587,7 +522,7 @@
                             "Name": "CooldownLabel",
                             "BackgroundTransparency": 1,
                             "Font": "GothamBold",
-                            "Text": "Ready",
+                            "Text": "0.0",
                             "TextColor3": { "Color3": [0.705882, 1, 0.803922] },
                             "TextScaled": true,
                             "TextXAlignment": "Center",

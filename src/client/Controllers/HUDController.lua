@@ -132,19 +132,16 @@ local function resolveCooldownSlot(root: Instance?)
 
     local slot = root:FindFirstChild("Slot")
     local gauge = slot and slot:FindFirstChild("Gauge")
-    local mask = gauge and gauge:FindFirstChild("Mask")
-    local fill = mask and mask:FindFirstChild("Fill")
     local cooldownLabel = gauge and gauge:FindFirstChild("CooldownLabel")
     local keyLabel = gauge and gauge:FindFirstChild("KeyLabel")
 
-    if not (slot and gauge and mask and fill and cooldownLabel and keyLabel) then
+    if not (slot and gauge and cooldownLabel and keyLabel) then
         return nil
     end
 
     return {
         Container = root,
         Gauge = gauge,
-        Fill = fill,
         CooldownLabel = cooldownLabel,
         KeyLabel = keyLabel,
     }
@@ -386,11 +383,6 @@ function HUDController:CaptureInterfaceElements(screen: ScreenGui, abilityConfig
         skillStroke.Transparency = abilityConfig.SkillStrokeTransparency or 0.2
         skillStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
     end
-    if skill.Fill then
-        skill.Fill.Visible = false
-        skill.Fill.BackgroundTransparency = 1
-    end
-
     dash.Gauge.BackgroundColor3 = dashConfig.BackgroundColor or Color3.fromRGB(18, 24, 32)
     dash.Gauge.BackgroundTransparency = dashConfig.BackgroundTransparency or 0.25
     local dashStroke = dash.Gauge:FindFirstChildWhichIsA("UIStroke")
@@ -400,16 +392,12 @@ function HUDController:CaptureInterfaceElements(screen: ScreenGui, abilityConfig
         dashStroke.Transparency = dashConfig.StrokeTransparency or 0.2
         dashStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
     end
-    if dash.Fill then
-        dash.Fill.Visible = false
-        dash.Fill.BackgroundTransparency = 1
-    end
 
     self.Screen = screen
     self.SkillDisplayKey = abilityConfig.SkillKey or "Q"
     local skillReadyText = abilityConfig.SkillReadyText
     if skillReadyText == nil then
-        skillReadyText = "0"
+        skillReadyText = "0.0"
     else
         skillReadyText = tostring(skillReadyText)
     end
@@ -418,7 +406,7 @@ function HUDController:CaptureInterfaceElements(screen: ScreenGui, abilityConfig
     self.PrimarySkillId = abilityConfig.PrimarySkillId or "AOE_Blast"
     local dashReadyText = dashConfig.ReadyText
     if dashReadyText == nil then
-        dashReadyText = "0"
+        dashReadyText = "0.0"
     else
         dashReadyText = tostring(dashReadyText)
     end
@@ -498,9 +486,11 @@ function HUDController:Update(state)
     self.Elements.EnemyLabel.Text = string.format("Enemies: %d", enemies)
 
     if state.Countdown and state.Countdown > 0 then
-        self.Elements.TimerLabel.Text = string.format("Start In: %ds", math.ceil(state.Countdown))
+        local countdown = math.max(0, state.Countdown)
+        local rounded = math.floor((countdown * 10) + 0.5) / 10
+        self.Elements.TimerLabel.Text = string.format("Time: %.1fs", rounded)
     elseif state.TimeRemaining and state.TimeRemaining >= 0 then
-        self.Elements.TimerLabel.Text = "Time Left: " .. formatTime(state.TimeRemaining)
+        self.Elements.TimerLabel.Text = "Time: " .. formatTime(state.TimeRemaining)
     else
         self.Elements.TimerLabel.Text = "Time: ∞"
     end
@@ -529,6 +519,14 @@ function HUDController:UpdateXP(state)
 
     local xpConfig = Config.UI and Config.UI.XP or {}
     local prefix = xpConfig.LabelPrefix or "XP"
+    prefix = string.gsub(prefix, "^%s+", "")
+    prefix = string.gsub(prefix, "%s+$", "")
+    local function composeXPText(valueText: string): string
+        if prefix ~= "" then
+            return string.format("%s %s", prefix, valueText)
+        end
+        return valueText
+    end
 
     local levelValue = tonumber(state.Level)
     if levelValue then
@@ -580,13 +578,13 @@ function HUDController:UpdateXP(state)
     xpFill.Size = UDim2.new(math.clamp(ratio, 0, 1), 0, 1, 0)
 
     if required > 0 then
-        xpLabel.Text = string.format("%s %d / %d", prefix, math.floor(current + 0.5), math.floor(required + 0.5))
+        xpLabel.Text = composeXPText(string.format("%d/%d", math.floor(current + 0.5), math.floor(required + 0.5)))
     elseif ratio > 0 then
-        xpLabel.Text = string.format("%s %d%%", prefix, math.floor(ratio * 100 + 0.5))
+        xpLabel.Text = composeXPText(string.format("%d%%", math.floor(ratio * 100 + 0.5)))
     elseif typeof(totalXP) == "number" then
-        xpLabel.Text = string.format("%s %d", prefix, math.floor(totalXP + 0.5))
+        xpLabel.Text = composeXPText(string.format("%d", math.floor(totalXP + 0.5)))
     else
-        xpLabel.Text = prefix
+        xpLabel.Text = composeXPText("0")
     end
 end
 
@@ -655,7 +653,8 @@ function HUDController:UpdateSkillCooldowns(skillTable)
     end
 
     if remaining > 0.05 then
-        cooldownLabel.Text = tostring(math.ceil(remaining))
+        local displayValue = math.floor((remaining * 10) + 0.5) / 10
+        cooldownLabel.Text = string.format("%.1f", displayValue)
         cooldownLabel.TextColor3 = Color3.new(1, 1, 1)
         cooldownLabel.TextStrokeTransparency = 0.6
         cooldownLabel.Visible = true
@@ -693,7 +692,8 @@ function HUDController:UpdateDashCooldown(dashData)
         dashCooldownLabel.TextStrokeTransparency = 0.6
         dashCooldownLabel.Visible = true
     else
-        dashCooldownLabel.Text = tostring(math.ceil(remaining))
+        local displayValue = math.floor((remaining * 10) + 0.5) / 10
+        dashCooldownLabel.Text = string.format("%.1f", displayValue)
         dashCooldownLabel.TextColor3 = Color3.new(1, 1, 1)
         dashCooldownLabel.TextStrokeTransparency = 0.6
         dashCooldownLabel.Visible = true
