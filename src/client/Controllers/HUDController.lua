@@ -697,7 +697,6 @@ function HUDController:UpdateDashCooldown(dashData)
         dashCooldownLabel.TextColor3 = Color3.new(1, 1, 1)
         dashCooldownLabel.TextStrokeTransparency = 0.6
         dashCooldownLabel.Visible = true
-
     end
 end
 

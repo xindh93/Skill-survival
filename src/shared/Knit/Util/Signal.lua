@@ -7,14 +7,16 @@ export type Connection = {
 }
 
 local function createConnection(signal: Signal, handler: (...any) -> ())
-    local connection = {
+    local connection
+    connection = {
         Connected = true,
         Disconnect = function()
-            if not connection.Connected then
+            if not connection or not connection.Connected then
                 return
             end
             connection.Connected = false
             signal._listeners[connection] = nil
+            connection = nil
         end,
     }
 
@@ -64,7 +66,7 @@ end
 
 function Signal:Fire(...)
     for connection, handler in pairs(self._listeners) do
-        if connection.Connected then
+        if connection and connection.Connected then
             task.spawn(handler, ...)
         end
     end
@@ -72,8 +74,10 @@ end
 
 function Signal:Destroy()
     for connection in pairs(self._listeners) do
-        connection.Connected = false
-        self._listeners[connection] = nil
+        if connection then
+            connection.Connected = false
+            self._listeners[connection] = nil
+        end
     end
 end
 
