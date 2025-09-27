@@ -593,8 +593,8 @@ function HUDController:Update(state)
         return
     end
 
-    local wave = state.Wave or 0
-    self.Elements.WaveLabel.Text = string.format("Wave %d", wave)
+    local elapsedValue = typeof(state.Elapsed) == "number" and state.Elapsed or 0
+    self.Elements.WaveLabel.Text = string.format("Elapsed %s", formatTime(elapsedValue))
 
     local enemies = state.RemainingEnemies or 0
     if typeof(enemies) == "number" then
@@ -604,9 +604,7 @@ function HUDController:Update(state)
     end
     self.Elements.EnemyLabel.Text = string.format("Enemies: %d", enemies)
 
-    local countdownValue = typeof(state.Countdown) == "number" and state.Countdown or 0
     local countdownLabel = self.Elements.CountdownLabel
-    local isPreparing = state.State == "Prepare" and countdownValue > 0
 
     if countdownLabel then
         countdownLabel.Visible = false
@@ -614,22 +612,10 @@ function HUDController:Update(state)
         countdownLabel.Text = ""
     end
 
-    if isPreparing then
-        local displayCountdown = math.max(0, math.floor(countdownValue + 0.5))
-        self.Elements.TimerLabel.Text = string.format("Start in: %ds", displayCountdown)
-        if countdownLabel then
-            countdownLabel.Text = string.format("Wave starts in: %ds", displayCountdown)
-            countdownLabel.Visible = true
-            countdownLabel.TextTransparency = 0
-        end
-    elseif countdownValue and countdownValue > 0 then
-        local countdown = math.max(0, countdownValue)
-        local rounded = math.floor((countdown * 10) + 0.5) / 10
-        self.Elements.TimerLabel.Text = string.format("Time: %.1fs", rounded)
-    elseif state.TimeRemaining and state.TimeRemaining >= 0 then
-        self.Elements.TimerLabel.Text = "Time: " .. formatTime(state.TimeRemaining)
+    if state.TimeRemaining and state.TimeRemaining >= 0 then
+        self.Elements.TimerLabel.Text = "Remaining: " .. formatTime(state.TimeRemaining)
     else
-        self.Elements.TimerLabel.Text = "Time: ∞"
+        self.Elements.TimerLabel.Text = "Remaining: ∞"
     end
 
     local gold = state.Gold or 0

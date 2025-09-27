@@ -2,6 +2,8 @@ local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local PhysicsService = game:GetService("PhysicsService")
+local CollectionService = game:GetService("CollectionService")
+local RunService = game:GetService("RunService")
 
 local Knit = require(ReplicatedStorage.Shared.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
@@ -45,14 +47,26 @@ function EnemyService:KnitInit()
     self.Enemies = {} :: {[Model]: {Model: Model, Humanoid: Humanoid, Stats: any, LastHit: Player?}}
     self.TouchCooldowns = {} :: {[Model]: {[Player]: number}}
     self.ActiveEnemies = 0
-    self.Spawning = false
     self.MatchActive = false
-    self.WaveCleared = Knit.Util.Signal.new()
     self.EnemyCountChanged = Knit.Util.Signal.new()
     self.CollisionGroups = {
         Player = PLAYER_COLLISION_GROUP,
         Enemy = ENEMY_COLLISION_GROUP,
     }
+    self.MatchStartTime = 0
+    self.LastSpawnTime = 0
+    self.NextPulseTime = 0
+    self.SurgeActiveUntil = nil
+    self.LastSurgeStart = nil
+    self.SurgeActive = false
+    self.CurrentSurgeIndex = 1
+    self.SpawnLoopConnection = nil
+    self.ActiveCap = Config.Enemy.MaxActive or 80
+    self.MaxActiveCap = Config.Enemy.MaxActive or 80
+    self.BossPhaseCap = Config.Enemy.BossPhaseMaxActive or self.ActiveCap
+    self.LastPortalUse = {} :: {[Instance]: number}
+    self.PortalIndex = 0
+    self.Random = Random.new()
     self:EnsureCollisionGroups()
 end
 
@@ -128,91 +142,392 @@ function EnemyService:KnitStart()
     end
 end
 
-function EnemyService:StartMatch()
+function EnemyService:StartMatch(startTime: number?)
     self.MatchActive = true
-    self.Spawning = false
     self.ActiveEnemies = 0
     self.Enemies = {}
     self.TouchCooldowns = {}
-    self.EnemyFolder:ClearAllChildren()
-    self.EnemyCountChanged:Fire(self.ActiveEnemies)
-end
-
-function EnemyService:StopAll()
-    self.MatchActive = false
-    self.Spawning = false
-    for model in pairs(self.Enemies) do
-        model:Destroy()
-    end
-    self.Enemies = {}
-    self.TouchCooldowns = {}
-    self.ActiveEnemies = 0
-    self.EnemyCountChanged:Fire(self.ActiveEnemies)
-end
-
-function EnemyService:BeginWave(waveNumber: number)
-    if not self.MatchActive then
-        return
-    end
-
-    self.Spawning = true
-    local spawnCount = math.max(1, Config.Enemy.BaseCount + Config.Enemy.CountGrowth * (waveNumber - 1))
-    local healthMultiplier = 1 + Config.Enemy.HealthGrowthRate * (waveNumber - 1)
-    local speedBonus = math.min(Config.Enemy.MaxSpeedDelta, Config.Enemy.SpeedGrowthRate * (waveNumber - 1))
-    local damage = Config.Enemy.BaseDamage + Config.Enemy.DamageGrowth * (waveNumber - 1)
-
-    local spawns = self.MapService:GetEnemySpawns()
-    if #spawns == 0 then
-        warn("[EnemyService] No spawn points available")
-        self.Spawning = false
-        self.WaveCleared:Fire()
-        return
-    end
-
+    self.MatchStartTime = startTime or time()
     local spawnInterval = Config.Enemy.SpawnInterval or 0
     if spawnInterval < 0 then
         spawnInterval = 0
     end
+    self.LastSpawnTime = self.MatchStartTime - spawnInterval
+    self.NextPulseTime = self.MatchStartTime + (Config.Session.PulseInterval or 0)
+    self.SurgeActiveUntil = nil
+    self.LastSurgeStart = nil
+    self.SurgeActive = false
+    self.CurrentSurgeIndex = 1
+    self.ActiveCap = self.MaxActiveCap
+    self.LastPortalUse = {}
+    self.PortalIndex = 0
+    self.EnemyFolder:ClearAllChildren()
+    self.EnemyCountChanged:Fire(self.ActiveEnemies)
 
-    local maxActive = Config.Enemy.MaxActive
-    if type(maxActive) ~= "number" or maxActive <= 0 then
-        maxActive = math.huge
+    if self.SpawnLoopConnection then
+        self.SpawnLoopConnection:Disconnect()
     end
 
-    task.spawn(function()
-        local index = 1
-        while index <= spawnCount do
-            if not self.MatchActive then
-                break
+    self.SpawnLoopConnection = RunService.Heartbeat:Connect(function()
+        self:OnHeartbeat()
+    end)
+end
+
+function EnemyService:StopAll()
+    self.MatchActive = false
+    if self.SpawnLoopConnection then
+        self.SpawnLoopConnection:Disconnect()
+        self.SpawnLoopConnection = nil
+    end
+
+    for model in pairs(self.Enemies) do
+        model:Destroy()
+    end
+
+    self.Enemies = {}
+    self.TouchCooldowns = {}
+    self.ActiveEnemies = 0
+    self.LastPortalUse = {}
+    self.EnemyCountChanged:Fire(self.ActiveEnemies)
+end
+
+function EnemyService:SetBossPhaseActiveCap()
+    self.ActiveCap = self.BossPhaseCap
+end
+
+function EnemyService:OnHeartbeat()
+    if not self.MatchActive then
+        return
+    end
+
+    local startTime = self.MatchStartTime or time()
+    local now = time()
+    local elapsed = math.max(0, now - startTime)
+
+    self:ProcessSurge(elapsed)
+    self:ProcessPulses(elapsed, now)
+    self:ProcessContinuousSpawns(elapsed, now)
+end
+
+function EnemyService:ProcessSurge(elapsed: number)
+    if self.SurgeActiveUntil and elapsed >= self.SurgeActiveUntil then
+        self.SurgeActiveUntil = nil
+        self.SurgeActive = false
+    end
+
+    local surgeTimes = Config.Session.SurgeTimes or {}
+    local surgeDuration = Config.Session.SurgeDuration or 0
+    local index = self.CurrentSurgeIndex or 1
+
+    while index <= #surgeTimes do
+        local startTime = surgeTimes[index]
+        if elapsed >= startTime then
+            if self.LastSurgeStart ~= startTime then
+                self.LastSurgeStart = startTime
+                self.SurgeActiveUntil = startTime + surgeDuration
+                self.SurgeActive = surgeDuration > 0
+                print(string.format("[EnemyService] Rush surge @t=%.2f", elapsed))
+                Net:FireAll("RushWarning", "surge")
             end
+            self.CurrentSurgeIndex = index + 1
+            break
+        else
+            break
+        end
+    end
 
-            while self.MatchActive and self.ActiveEnemies >= maxActive do
-                task.wait(math.max(0.1, spawnInterval * 0.25))
-            end
+    if not self.SurgeActiveUntil then
+        self.SurgeActive = false
+    elseif elapsed < self.SurgeActiveUntil then
+        self.SurgeActive = true
+    end
+end
 
-            if not self.MatchActive then
-                break
-            end
+function EnemyService:ProcessPulses(elapsed: number, now: number)
+    local interval = Config.Session.PulseInterval or 0
+    if interval <= 0 then
+        return
+    end
 
-            local spawnPart = spawns[((index - 1) % #spawns) + 1]
-            local spawnCFrame = spawnPart.CFrame + Vector3.new(0, 3, 0)
-            self:SpawnEnemy(spawnCFrame, {
-                MaxHealth = Config.Enemy.BaseHealth * healthMultiplier,
-                Damage = damage,
-                Speed = Config.Enemy.BaseSpeed + speedBonus,
-                RewardGold = Config.Rewards.KillGold,
-            })
+    if self.NextPulseTime <= 0 then
+        self.NextPulseTime = (self.MatchStartTime or now) + interval
+    end
 
-            index += 1
+    while now >= self.NextPulseTime do
+        print(string.format("[EnemyService] Rush pulse @t=%.2f", elapsed))
+        Net:FireAll("RushWarning", "pulse")
+        self:SpawnEnemies(Config.Enemy.PulseBonus or 0, elapsed, "pulse")
+        self.NextPulseTime += interval
+    end
+end
 
-            if index <= spawnCount then
-                task.wait(spawnInterval)
+function EnemyService:ProcessContinuousSpawns(elapsed: number, now: number)
+    local spawnInterval = Config.Enemy.SpawnInterval or 0
+    if spawnInterval <= 0 then
+        spawnInterval = 0.1
+    end
+
+    if self.SurgeActive then
+        local multiplier = Config.Enemy.SurgeIntervalMult or 1
+        if multiplier > 0 then
+            spawnInterval = spawnInterval * multiplier
+        end
+    end
+
+    while now - self.LastSpawnTime >= spawnInterval do
+        if not self:SpawnEnemies(1, elapsed, "continuous") then
+            break
+        end
+        self.LastSpawnTime += spawnInterval
+    end
+end
+
+function EnemyService:GetSpawnPortals(): {BasePart}
+    local portals = {}
+
+    for _, instance in ipairs(CollectionService:GetTagged("SpawnPortal")) do
+        local part = self:ResolvePortalPart(instance)
+        if part and part.Parent then
+            table.insert(portals, part)
+        end
+    end
+
+    if #portals == 0 and self.MapService then
+        for _, part in ipairs(self.MapService:GetEnemySpawns()) do
+            if part and part.Parent and part:IsA("BasePart") then
+                table.insert(portals, part)
             end
         end
+    end
 
-        self.Spawning = false
-        self:CheckWaveCleared()
-    end)
+    if #portals == 0 then
+        return portals
+    end
+
+    local lookup = {}
+    for _, portal in ipairs(portals) do
+        lookup[portal] = true
+    end
+
+    for portal in pairs(self.LastPortalUse) do
+        if not lookup[portal] or not portal.Parent then
+            self.LastPortalUse[portal] = nil
+        end
+    end
+
+    return portals
+end
+
+function EnemyService:ResolvePortalPart(instance: Instance?): BasePart?
+    if not instance then
+        return nil
+    end
+
+    if instance:IsA("BasePart") then
+        return instance
+    end
+
+    if instance:IsA("Model") then
+        return instance:FindFirstChildWhichIsA("BasePart", true)
+    end
+
+    return instance:FindFirstChildWhichIsA("BasePart", true)
+end
+
+function EnemyService:SelectPortal(portals: {BasePart}): BasePart?
+    local count = #portals
+    if count == 0 then
+        return nil
+    end
+
+    for _ = 1, count do
+        self.PortalIndex = (self.PortalIndex % count) + 1
+        local portal = portals[self.PortalIndex]
+        if portal and portal.Parent then
+            return portal
+        end
+    end
+
+    return nil
+end
+
+function EnemyService:GetNearestPlayerDistance(position: Vector3): number?
+    local nearest: number? = nil
+    for _, player in ipairs(Players:GetPlayers()) do
+        local character = player.Character
+        local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+        local root = character and character:FindFirstChild("HumanoidRootPart")
+        if humanoid and humanoid.Health > 0 and root then
+            local distance = (root.Position - position).Magnitude
+            if not nearest or distance < nearest then
+                nearest = distance
+            end
+        end
+    end
+    return nearest
+end
+
+function EnemyService:ComputeEnemyStats(elapsed: number)
+    local minutes = math.max(0, elapsed) / 60
+    local healthGrowth = Config.Enemy.HealthGrowthRate or 0
+    local baseHealth = Config.Enemy.BaseHealth or 70
+    local healthMultiplier = math.pow(1 + healthGrowth, minutes)
+    local maxHealth = baseHealth * healthMultiplier
+
+    local speedGrowth = Config.Enemy.SpeedGrowthRate or 0
+    local speedBonus = math.min(Config.Enemy.MaxSpeedDelta or 0, speedGrowth * minutes)
+    local speed = (Config.Enemy.BaseSpeed or 12) + speedBonus
+
+    local damage = (Config.Enemy.BaseDamage or 10) + (Config.Enemy.DamageGrowth or 0) * minutes
+
+    local eliteChance = 0
+    if elapsed >= 360 then
+        eliteChance = Config.Enemy.EliteChanceAfter6m or Config.Enemy.EliteChanceStart or 0
+    elseif elapsed >= 120 then
+        eliteChance = Config.Enemy.EliteChanceStart or 0
+    end
+
+    local isElite = eliteChance > 0 and self.Random:NextNumber() < eliteChance
+    if isElite then
+        maxHealth *= 1.75
+        damage *= 1.5
+        speed += 2
+    end
+
+    local reward = Config.Rewards.KillGold or 0
+    if isElite then
+        reward = math.floor(reward * 1.5)
+    end
+
+    return {
+        MaxHealth = maxHealth,
+        Damage = damage,
+        Speed = speed,
+        RewardGold = reward,
+        IsElite = isElite,
+    }
+end
+
+function EnemyService:LogSpawn(portal: Instance?, reason: string, attempt: number, nearest: number?, isElite: boolean?, source: string?)
+    local portalName = "unknown"
+    if portal and portal.Parent then
+        portalName = portal:GetFullName()
+    end
+
+    local message = string.format("[EnemyService] Spawn %s @Portal=%s, attempts=%d", tostring(reason), portalName, attempt or 0)
+    if nearest then
+        message ..= string.format(", nearest=%.1f", nearest)
+    end
+    if source then
+        message ..= string.format(", source=%s", source)
+    end
+    if isElite then
+        message ..= ", elite=true"
+    end
+    print(message)
+end
+
+function EnemyService:AttemptSpawn(portals: {BasePart}, stats, elapsed: number, source: string?): boolean
+    if #portals == 0 then
+        warn("[EnemyService] No spawn portals available")
+        return false
+    end
+
+    local spawnConfig = Config.Enemy.Spawn or {}
+    local maxAttempts = math.max(1, spawnConfig.MaxSpawnAttempts or 8)
+
+    for attempt = 1, maxAttempts do
+        local portal = self:SelectPortal(portals)
+        if not portal then
+            break
+        end
+
+        local spawnCFrame, reason, nearest = self:ValidatePortal(portal, spawnConfig)
+        if spawnCFrame then
+            self.LastPortalUse[portal] = time()
+            self:SpawnEnemy(spawnCFrame, stats)
+            self:LogSpawn(portal, "OK", attempt, nearest, stats.IsElite, source)
+            return true
+        else
+            self:LogSpawn(portal, reason or "Failed", attempt, nearest, stats.IsElite, source)
+        end
+    end
+
+    return false
+end
+
+function EnemyService:SpawnEnemies(count: number, elapsed: number, source: string?): boolean
+    count = math.max(0, math.floor(count or 0))
+    if count <= 0 then
+        return false
+    end
+
+    local portals = self:GetSpawnPortals()
+    if #portals == 0 then
+        warn("[EnemyService] No spawn portals available")
+        return false
+    end
+
+    local spawned = 0
+    for _ = 1, count do
+        if not self.MatchActive then
+            break
+        end
+
+        if self.ActiveEnemies >= self.ActiveCap then
+            print(string.format("[EnemyService] Active cap reached (%d/%d) -> skip", self.MaxActiveCap, self.ActiveCap))
+            break
+        end
+
+        local stats = self:ComputeEnemyStats(elapsed)
+        if not self:AttemptSpawn(portals, stats, elapsed, source) then
+            break
+        end
+
+        spawned += 1
+    end
+
+    return spawned > 0
+end
+
+function EnemyService:ValidatePortal(portal: BasePart, spawnConfig)
+    local now = time()
+    local cooldown = spawnConfig.PortalCooldown or 0
+    local lastUse = self.LastPortalUse[portal]
+    if cooldown > 0 and lastUse and (now - lastUse) < cooldown then
+        return nil, "Cooldown"
+    end
+
+    local part = self:ResolvePortalPart(portal)
+    if not part or not part.Parent then
+        return nil, "Invalid"
+    end
+
+    local separation = spawnConfig.Separation or 0
+    local offset = Vector3.zero
+    if separation > 0 then
+        local radius = math.sqrt(self.Random:NextNumber()) * separation
+        local angle = self.Random:NextNumber() * math.pi * 2
+        offset = Vector3.new(math.cos(angle) * radius, 0, math.sin(angle) * radius)
+    end
+
+    local origin = part.Position + offset + Vector3.new(0, 6, 0)
+    local params = RaycastParams.new()
+    params.FilterType = Enum.RaycastFilterType.Exclude
+    params.FilterDescendantsInstances = {self.EnemyFolder}
+    local result = Workspace:Raycast(origin, Vector3.new(0, -20, 0), params)
+    if not result then
+        return nil, "NoGround"
+    end
+
+    local spawnPosition = result.Position + Vector3.new(0, 3, 0)
+    local minDistance = spawnConfig.MinSpawnDistance or 0
+    local nearest = self:GetNearestPlayerDistance(spawnPosition)
+    if minDistance > 0 and nearest and nearest < minDistance then
+        return nil, "TooClose", nearest
+    end
+
+    return CFrame.new(spawnPosition), "OK", nearest
 end
 
 function EnemyService:CreateEnemyModel(stats)
@@ -270,6 +585,10 @@ end
 
 function EnemyService:SpawnEnemy(spawnCFrame: CFrame, stats)
     local model = self:CreateEnemyModel(stats)
+    if stats.IsElite then
+        model.Name = "Elite" .. model.Name
+        model:SetAttribute("IsElite", true)
+    end
     model:SetPrimaryPartCFrame(spawnCFrame)
     model.Parent = self.EnemyFolder
     self:ApplyEnemyCollisionGroup(model)
@@ -451,7 +770,6 @@ function EnemyService:OnEnemyDied(enemyData)
     end
 
     model:Destroy()
-    self:CheckWaveCleared()
 end
 
 function EnemyService:ApplyDamage(model: Model, amount: number, player: Player?)
@@ -471,34 +789,12 @@ function EnemyService:ApplyDamage(model: Model, amount: number, player: Player?)
     end
 end
 
-function EnemyService:CheckWaveCleared()
-    if not self.Spawning and self.ActiveEnemies <= 0 then
-        self.WaveCleared:Fire()
-    end
-end
-
 function EnemyService:GetActiveEnemies()
     return self.Enemies
 end
 
 function EnemyService:GetRemainingEnemies(): number
     return self.ActiveEnemies
-end
-
-function EnemyService:IsSpawning(): boolean
-    return self.Spawning
-end
-
-function EnemyService:ForceNextWave()
-    self.Spawning = false
-    for model in pairs(self.Enemies) do
-        model:Destroy()
-    end
-    self.Enemies = {}
-    self.TouchCooldowns = {}
-    self.ActiveEnemies = 0
-    self.EnemyCountChanged:Fire(self.ActiveEnemies)
-    self.WaveCleared:Fire()
 end
 
 return EnemyService
