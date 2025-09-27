@@ -331,10 +331,14 @@ function HUDController:CaptureInterfaceElements(screen: ScreenGui, abilityConfig
         end
         local levelWidth = (uiConfig.XP and uiConfig.XP.LevelWidth) or 60
         if xpLabel then
+            xpLabel.Visible = true
+            xpLabel.TextTransparency = 0
             xpLabel.TextSize = uiConfig.XP and uiConfig.XP.LabelTextSize or infoTextSize
             xpLabel.Size = UDim2.new(1, -(levelWidth + headerPadding), 1, 0)
         end
         if levelLabel then
+            levelLabel.Visible = true
+            levelLabel.TextTransparency = 0
             levelLabel.TextSize = uiConfig.XP and uiConfig.XP.LevelTextSize or alertTextSize
             levelLabel.TextXAlignment = Enum.TextXAlignment.Left
             if xpLabel then
@@ -572,8 +576,14 @@ local function applyCooldownVisual(
         return
     end
 
-    label.Text = formatCooldownValue(remaining)
-    label.TextColor3 = Color3.new(1, 1, 1)
+    local cooldownText = formatCooldownValue(remaining)
+    if cooldownText == "0.0" or cooldownText == "0" or cooldownText == "-0.0" then
+        label.Text = readyText
+        label.TextColor3 = readyColor
+    else
+        label.Text = cooldownText
+        label.TextColor3 = Color3.new(1, 1, 1)
+    end
     label.TextStrokeTransparency = 0.6
     label.Visible = true
 
