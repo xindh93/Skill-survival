@@ -692,10 +692,12 @@ function HUDController:UpdateXP(state)
     end
 
     local levelValue = tonumber(state.Level)
+    local levelPrefixJoiner = levelJoiner ~= "" and levelJoiner or ""
+
     if levelValue then
-        levelLabel.Text = string.format("Lv%s%d", levelJoiner, math.max(1, math.floor(levelValue + 0.5)))
+        levelLabel.Text = string.format("Lv%s %d", levelPrefixJoiner, math.max(1, math.floor(levelValue + 0.5)))
     else
-        levelLabel.Text = string.format("Lv%s1", levelJoiner)
+        levelLabel.Text = string.format("Lv%s %d", levelPrefixJoiner, 1)
     end
 
     local progress = state.XPProgress
