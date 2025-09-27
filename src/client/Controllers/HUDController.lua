@@ -337,6 +337,7 @@ function HUDController:CaptureInterfaceElements(screen: ScreenGui, abilityConfig
             else
                 levelLabel.Size = UDim2.new(1, 0, 1, 0)
             end
+            levelLabel.Size = UDim2.new(0, levelWidth, 1, 0)
         end
         if xpBar then
             xpBar.BackgroundColor3 = uiConfig.XP and uiConfig.XP.BackgroundColor or panelBackground
@@ -409,6 +410,7 @@ function HUDController:CaptureInterfaceElements(screen: ScreenGui, abilityConfig
         skill.Container.Size = UDim2.new(0, skillSlotSize, 0, skillSlotSize)
         skill.Gauge.BackgroundColor3 = abilityConfig.SkillBackgroundColor or Color3.fromRGB(18, 24, 32)
         skill.Gauge.BackgroundTransparency = abilityConfig.SkillBackgroundTransparency or 0.2
+        skill.Gauge.BackgroundTransparency = abilityConfig.SkillBackgroundTransparency or 1
         local skillStroke = skill.Gauge:FindFirstChildWhichIsA("UIStroke")
         if skillStroke then
             skillStroke.Color = abilityConfig.SkillStrokeColor or Color3.fromRGB(255, 196, 110)
@@ -436,6 +438,7 @@ function HUDController:CaptureInterfaceElements(screen: ScreenGui, abilityConfig
         dash.Container.Size = UDim2.new(0, dashSize, 0, dashSize)
         dash.Gauge.BackgroundColor3 = dashConfig.BackgroundColor or Color3.fromRGB(18, 24, 32)
         dash.Gauge.BackgroundTransparency = dashConfig.BackgroundTransparency or 0.2
+        dash.Gauge.BackgroundTransparency = dashConfig.BackgroundTransparency or 1
         local dashStroke = dash.Gauge:FindFirstChildWhichIsA("UIStroke")
         if dashStroke then
             dashStroke.Color = dashConfig.StrokeColor or Color3.fromRGB(120, 200, 255)
