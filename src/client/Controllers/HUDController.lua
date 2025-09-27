@@ -97,7 +97,6 @@ function HUDController:EnsureInterface(playerGui: PlayerGui?)
     end
 
     if not screen or not screen:IsA("ScreenGui") then
-        warn("HUDController: SkillSurvivalHUD missing from PlayerGui")
         return nil
     end
 
@@ -162,7 +161,7 @@ local function resolveCooldownSlot(root: Instance?)
         end
     end
 
-    if not (gauge and cooldownLabel and keyLabel) then
+    if not (gauge and cooldownLabel) then
         return nil
     end
 
@@ -200,7 +199,6 @@ function HUDController:CaptureInterfaceElements(screen: ScreenGui, abilityConfig
     local goldLabel = statusPanel and statusPanel:FindFirstChild("GoldLabel")
 
     local xpHeader = xpPanel and xpPanel:FindFirstChild("XPHeader")
-    local xpHeaderLayout = xpHeader and xpHeader:FindFirstChildWhichIsA("UIListLayout")
     local xpLabel = xpHeader and xpHeader:FindFirstChild("XPText")
     local levelLabel = xpHeader and xpHeader:FindFirstChild("LevelLabel")
     local xpBar = xpPanel and xpPanel:FindFirstChild("XPBar")
@@ -221,7 +219,6 @@ function HUDController:CaptureInterfaceElements(screen: ScreenGui, abilityConfig
     local dash = resolveCooldownSlot(dashSlot)
 
     if not skill and not dash then
-        warn("HUDController: Ability slots missing or malformed")
         self.Screen = screen
         self.Elements = {}
         if self.InterfaceSignal then
@@ -327,23 +324,15 @@ function HUDController:CaptureInterfaceElements(screen: ScreenGui, abilityConfig
         if xpHeader then
             xpHeader.Size = UDim2.new(1, 0, 0, uiConfig.XP and uiConfig.XP.LabelHeight or 24)
         end
-        local headerPadding = 8
-        if xpHeaderLayout and xpHeaderLayout.Padding then
-            headerPadding = xpHeaderLayout.Padding.Offset or headerPadding
-        end
-        local levelWidth = (uiConfig.XP and uiConfig.XP.LevelWidth) or 60
         if xpLabel then
+            xpLabel.Visible = true
+            xpLabel.TextTransparency = 0
             xpLabel.TextSize = uiConfig.XP and uiConfig.XP.LabelTextSize or infoTextSize
-            xpLabel.Size = UDim2.new(1, -(levelWidth + headerPadding), 1, 0)
         end
         if levelLabel then
+            levelLabel.Visible = true
+            levelLabel.TextTransparency = 0
             levelLabel.TextSize = uiConfig.XP and uiConfig.XP.LevelTextSize or alertTextSize
-            levelLabel.TextXAlignment = Enum.TextXAlignment.Left
-            if xpLabel then
-                levelLabel.Size = UDim2.new(0, levelWidth, 1, 0)
-            else
-                levelLabel.Size = UDim2.new(1, 0, 1, 0)
-            end
         end
         if xpBar then
             xpBar.BackgroundColor3 = uiConfig.XP and uiConfig.XP.BackgroundColor or panelBackground
@@ -433,10 +422,6 @@ function HUDController:CaptureInterfaceElements(screen: ScreenGui, abilityConfig
             skill.CooldownLabel.TextTransparency = 0
             skill.CooldownLabel.Visible = true
         end
-        if skill.KeyLabel then
-            skill.KeyLabel.TextTransparency = 0
-            skill.KeyLabel.Visible = true
-        end
     end
 
     if dash then
@@ -460,10 +445,6 @@ function HUDController:CaptureInterfaceElements(screen: ScreenGui, abilityConfig
             dash.CooldownLabel.TextTransparency = 0
             dash.CooldownLabel.Visible = true
         end
-        if dash.KeyLabel then
-            dash.KeyLabel.TextTransparency = 0
-            dash.KeyLabel.Visible = true
-        end
     end
 
     self.Screen = screen
@@ -486,15 +467,9 @@ function HUDController:CaptureInterfaceElements(screen: ScreenGui, abilityConfig
     self.DashReadyText = dashReadyText
     self.DashReadyColor = dashConfig.ReadyColor or Color3.fromRGB(180, 255, 205)
 
-    if skill and skill.KeyLabel then
-        skill.KeyLabel.Text = self.SkillDisplayKey
-    end
     if skill and skill.CooldownLabel then
         skill.CooldownLabel.Text = self.SkillReadyText
         skill.CooldownLabel.TextColor3 = self.SkillReadyColor
-    end
-    if dash and dash.KeyLabel then
-        dash.KeyLabel.Text = dashConfig.KeyText or "E"
     end
     if dash and dash.CooldownLabel then
         dash.CooldownLabel.Text = self.DashReadyText
@@ -507,7 +482,6 @@ function HUDController:CaptureInterfaceElements(screen: ScreenGui, abilityConfig
         TimerLabel = timerLabel,
         GoldLabel = goldLabel,
         SkillCooldownLabel = skill and skill.CooldownLabel or nil,
-        SkillKeyLabel = skill and skill.KeyLabel or nil,
         SkillCooldownOverlay = skill and skill.Overlay or nil,
         DashCooldownLabel = dash and dash.CooldownLabel or nil,
         DashCooldownOverlay = dash and dash.Overlay or nil,
@@ -589,8 +563,18 @@ local function applyCooldownVisual(
         return
     end
 
-    label.Text = formatCooldownValue(remaining)
-    label.TextColor3 = Color3.new(1, 1, 1)
+    local cooldownText = formatCooldownValue(remaining)
+    local numericDisplay = tonumber(cooldownText)
+    if (numericDisplay and math.abs(numericDisplay) <= 0.05)
+        or cooldownText == "0.0"
+        or cooldownText == "0"
+        or cooldownText == "-0.0" then
+        label.Text = readyText
+        label.TextColor3 = readyColor
+    else
+        label.Text = cooldownText
+        label.TextColor3 = Color3.new(1, 1, 1)
+    end
     label.TextStrokeTransparency = 0.6
     label.Visible = true
 
@@ -771,14 +755,9 @@ end
 
 function HUDController:UpdateSkillCooldowns(skillTable)
     local cooldownLabel = self.Elements.SkillCooldownLabel
-    local keyLabel = self.Elements.SkillKeyLabel
     local overlay = self.Elements.SkillCooldownOverlay
     if not cooldownLabel then
         return
-    end
-
-    if keyLabel then
-        keyLabel.Text = self.SkillDisplayKey or "Q"
     end
 
     local primaryId = self.PrimarySkillId
