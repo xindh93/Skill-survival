@@ -191,12 +191,14 @@ function HUDController:CaptureInterfaceElements(screen: ScreenGui, abilityConfig
     local goldLabel = statusPanel and statusPanel:FindFirstChild("GoldLabel")
 
     local xpHeader = xpPanel and xpPanel:FindFirstChild("XPHeader")
+    local xpHeaderLayout = xpHeader and xpHeader:FindFirstChildWhichIsA("UIListLayout")
     local xpLabel = xpHeader and xpHeader:FindFirstChild("XPText")
     local levelLabel = xpHeader and xpHeader:FindFirstChild("LevelLabel")
     local xpBar = xpPanel and xpPanel:FindFirstChild("XPBar")
     local xpFill = xpBar and xpBar:FindFirstChild("Fill")
 
     local alertArea = safeFrame:FindFirstChild("AlertArea")
+    local countdownLabel = alertArea and alertArea:FindFirstChild("CountdownLabel")
     local waveAnnouncement = alertArea and alertArea:FindFirstChild("WaveAnnouncement")
     local messageLabel = alertArea and alertArea:FindFirstChild("MessageLabel")
     local reservedAlert = alertArea and alertArea:FindFirstChild("ReservedAlerts")
@@ -316,12 +318,18 @@ function HUDController:CaptureInterfaceElements(screen: ScreenGui, abilityConfig
         if xpHeader then
             xpHeader.Size = UDim2.new(1, 0, 0, uiConfig.XP and uiConfig.XP.LabelHeight or 24)
         end
+        local headerPadding = 8
+        if xpHeaderLayout and xpHeaderLayout.Padding then
+            headerPadding = xpHeaderLayout.Padding.Offset or headerPadding
+        end
+        local levelWidth = (uiConfig.XP and uiConfig.XP.LevelWidth) or 60
         if xpLabel then
             xpLabel.TextSize = uiConfig.XP and uiConfig.XP.LabelTextSize or infoTextSize
+            xpLabel.Size = UDim2.new(1, -(levelWidth + headerPadding), 1, 0)
         end
         if levelLabel then
             levelLabel.TextSize = uiConfig.XP and uiConfig.XP.LevelTextSize or alertTextSize
-            levelLabel.Size = UDim2.new(0, (uiConfig.XP and uiConfig.XP.LevelWidth) or 60, 1, 0)
+            levelLabel.Size = UDim2.new(0, levelWidth, 1, 0)
         end
         if xpBar then
             xpBar.BackgroundColor3 = uiConfig.XP and uiConfig.XP.BackgroundColor or panelBackground
@@ -393,7 +401,7 @@ function HUDController:CaptureInterfaceElements(screen: ScreenGui, abilityConfig
     if skill then
         skill.Container.Size = UDim2.new(0, skillSlotSize, 0, skillSlotSize)
         skill.Gauge.BackgroundColor3 = abilityConfig.SkillBackgroundColor or Color3.fromRGB(18, 24, 32)
-        skill.Gauge.BackgroundTransparency = abilityConfig.SkillBackgroundTransparency or 0.25
+        skill.Gauge.BackgroundTransparency = abilityConfig.SkillBackgroundTransparency or 1
         local skillStroke = skill.Gauge:FindFirstChildWhichIsA("UIStroke")
         if skillStroke then
             skillStroke.Color = abilityConfig.SkillStrokeColor or Color3.fromRGB(255, 196, 110)
@@ -414,7 +422,7 @@ function HUDController:CaptureInterfaceElements(screen: ScreenGui, abilityConfig
     if dash then
         dash.Container.Size = UDim2.new(0, dashSize, 0, dashSize)
         dash.Gauge.BackgroundColor3 = dashConfig.BackgroundColor or Color3.fromRGB(18, 24, 32)
-        dash.Gauge.BackgroundTransparency = dashConfig.BackgroundTransparency or 0.25
+        dash.Gauge.BackgroundTransparency = dashConfig.BackgroundTransparency or 1
         local dashStroke = dash.Gauge:FindFirstChildWhichIsA("UIStroke")
         if dashStroke then
             dashStroke.Color = dashConfig.StrokeColor or Color3.fromRGB(120, 200, 255)
@@ -477,6 +485,7 @@ function HUDController:CaptureInterfaceElements(screen: ScreenGui, abilityConfig
         DashCooldownLabel = dash and dash.CooldownLabel or nil,
         MessageLabel = messageLabel,
         WaveAnnouncement = waveAnnouncement,
+        CountdownLabel = countdownLabel,
         ReservedAlert = reservedAlert,
         ReservedAlertLabel = reservedLabel,
         XPFill = xpFill,
@@ -532,8 +541,26 @@ function HUDController:Update(state)
     end
     self.Elements.EnemyLabel.Text = string.format("Enemies: %d", enemies)
 
-    if state.Countdown and state.Countdown > 0 then
-        local countdown = math.max(0, state.Countdown)
+    local countdownValue = typeof(state.Countdown) == "number" and state.Countdown or 0
+    local countdownLabel = self.Elements.CountdownLabel
+    local isPreparing = state.State == "Prepare" and countdownValue > 0
+
+    if countdownLabel then
+        countdownLabel.Visible = false
+        countdownLabel.TextTransparency = 1
+        countdownLabel.Text = ""
+    end
+
+    if isPreparing then
+        local displayCountdown = math.max(0, math.floor(countdownValue + 0.5))
+        self.Elements.TimerLabel.Text = string.format("Start in: %ds", displayCountdown)
+        if countdownLabel then
+            countdownLabel.Text = string.format("Wave starts in: %ds", displayCountdown)
+            countdownLabel.Visible = true
+            countdownLabel.TextTransparency = 0
+        end
+    elseif countdownValue and countdownValue > 0 then
+        local countdown = math.max(0, countdownValue)
         local rounded = math.floor((countdown * 10) + 0.5) / 10
         self.Elements.TimerLabel.Text = string.format("Time: %.1fs", rounded)
     elseif state.TimeRemaining and state.TimeRemaining >= 0 then
