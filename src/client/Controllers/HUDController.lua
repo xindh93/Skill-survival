@@ -545,6 +545,19 @@ function HUDController:UpdateXP(state)
         levelLabel.Text = string.format("Lv%s%d", levelJoiner, math.max(1, math.floor(levelValue + 0.5)))
     else
         levelLabel.Text = string.format("Lv%s1", levelJoiner)
+    local function composeXPText(valueText: string): string
+        if prefix ~= "" then
+            return string.format("%s %s", prefix, valueText)
+        end
+        return valueText
+    end
+    prefix = string.gsub(prefix, "%s+$", "")
+
+    local levelValue = tonumber(state.Level)
+    if levelValue then
+        levelLabel.Text = string.format("Lv%d", math.max(1, math.floor(levelValue + 0.5)))
+    else
+        levelLabel.Text = "Lv1"
     end
 
     local progress = state.XPProgress
@@ -597,6 +610,19 @@ function HUDController:UpdateXP(state)
         xpLabel.Text = composeXPText(string.format("%d", math.floor(totalXP + 0.5)))
     else
         xpLabel.Text = composeXPText("0")
+    elseif ratio > 0 then
+        xpLabel.Text = composeXPText(string.format("%d%%", math.floor(ratio * 100 + 0.5)))
+    elseif typeof(totalXP) == "number" then
+        xpLabel.Text = composeXPText(string.format("%d", math.floor(totalXP + 0.5)))
+    else
+        xpLabel.Text = composeXPText("0")
+        xpLabel.Text = string.format("%s%d/%d", prefix, math.floor(current + 0.5), math.floor(required + 0.5))
+    elseif ratio > 0 then
+        xpLabel.Text = string.format("%s%d%%", prefix, math.floor(ratio * 100 + 0.5))
+    elseif typeof(totalXP) == "number" then
+        xpLabel.Text = string.format("%s%d", prefix, math.floor(totalXP + 0.5))
+    else
+        xpLabel.Text = string.format("%s0", prefix)
     end
 end
 
