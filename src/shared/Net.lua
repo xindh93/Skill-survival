@@ -33,6 +33,10 @@ Net.Definitions = {
         DashRequest = "DashRequest",
         DashReplicate = "DashReplicate",
         DashCooldown = "DashCooldown",
+        BossSpawned = "BossSpawned",
+        BossEnraged = "BossEnraged",
+        RushWarning = "RushWarning",
+        TeammateDown = "TeammateDown",
     },
     Functions = {
         RequestSummary = "RequestSummary",

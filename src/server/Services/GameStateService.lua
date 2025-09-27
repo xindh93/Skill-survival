@@ -17,16 +17,20 @@ local GameStateService = Knit.CreateService({
 
 function GameStateService:KnitInit()
     self.State = "Idle"
-    self.CurrentWave = 0
     self.MatchStartTime = 0
     self.RestartSignal = Knit.Util.Signal.new()
     self.ResultReason = "Unknown"
+    self.BossSpawned = false
+    self.EnrageTriggered = false
+    self.AwardedMilestones = {}
+    self.CharacterConnections = {}
 end
 
 function GameStateService:KnitStart()
     self.EnemyService = Knit.GetService("EnemyService")
     self.RewardService = Knit.GetService("RewardService")
     self.MapService = Knit.GetService("MapService")
+    self.BossService = Knit.GetService("BossService")
 
     if self.EnemyService then
         self.PlayerCollisionGroup = self.EnemyService:GetPlayerCollisionGroup()
@@ -42,10 +46,32 @@ function GameStateService:KnitStart()
 
     if self.EnemyService.EnemyCountChanged then
         self.EnemyService.EnemyCountChanged:Connect(function()
-            if self.State == "Prepare" or self.State == "Active" then
+            if self.State == "Active" then
                 Net:FireAll("HUD", self:GetHUDPayload())
             end
         end)
+    end
+
+    if self.BossService then
+        if self.BossService.BossSpawned then
+            self.BossService.BossSpawned:Connect(function()
+                if self.State == "Active" and not self.BossSpawned then
+                    self.BossSpawned = true
+                    if self.EnemyService and self.EnemyService.SetBossPhaseActiveCap then
+                        self.EnemyService:SetBossPhaseActiveCap()
+                    end
+                end
+            end)
+        end
+
+        if self.BossService.EnrageTriggered then
+            self.BossService.EnrageTriggered:Connect(function()
+                if self.State == "Active" and not self.EnrageTriggered then
+                    self.EnrageTriggered = true
+                    self.ResultReason = "Boss enraged"
+                end
+            end)
+        end
     end
 
     Net:GetFunction("RestartMatch").OnServerInvoke = function(player)
@@ -64,6 +90,10 @@ function GameStateService:KnitStart()
         player.CharacterAdded:Connect(function(character)
             self:OnCharacterAdded(player, character)
         end)
+    end)
+
+    Players.PlayerRemoving:Connect(function(player)
+        self:DisconnectCharacterSignals(player)
     end)
 
     for _, player in ipairs(Players:GetPlayers()) do
@@ -137,6 +167,60 @@ function GameStateService:ApplyCharacterCollisionGroup(character: Model)
     end)
 end
 
+function GameStateService:DisconnectCharacterSignals(player: Player)
+    local connections = self.CharacterConnections[player]
+    if not connections then
+        return
+    end
+
+    for _, connection in ipairs(connections) do
+        if connection then
+            connection:Disconnect()
+        end
+    end
+
+    self.CharacterConnections[player] = nil
+end
+
+function GameStateService:BindTeammateSignals(player: Player, character: Model)
+    if not player or not character then
+        return
+    end
+
+    self:DisconnectCharacterSignals(player)
+
+    local connections = {}
+    self.CharacterConnections[player] = connections
+
+    local function connectHumanoid(humanoid: Humanoid)
+        if not humanoid then
+            return
+        end
+
+        table.insert(connections, humanoid.Died:Connect(function()
+            local name = player.DisplayName or player.Name
+            Net:FireAll("TeammateDown", name)
+        end))
+    end
+
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        connectHumanoid(humanoid)
+    end
+
+    table.insert(connections, character.ChildAdded:Connect(function(child)
+        if child:IsA("Humanoid") then
+            connectHumanoid(child)
+        end
+    end))
+
+    table.insert(connections, character.AncestryChanged:Connect(function(_, parent)
+        if not parent then
+            self:DisconnectCharacterSignals(player)
+        end
+    end))
+end
+
 function GameStateService:OnCharacterAdded(_player: Player, character: Model)
     if not character then
         return
@@ -147,6 +231,8 @@ function GameStateService:OnCharacterAdded(_player: Player, character: Model)
     task.defer(function()
         self:TeleportCharacterToSpawn(character)
     end)
+
+    self:BindTeammateSignals(_player, character)
 end
 
 function GameStateService:TeleportCharacterToSpawn(character: Model)
@@ -194,105 +280,85 @@ function GameStateService:RestartMatch(player: Player)
 end
 
 function GameStateService:RunSession()
-    self.State = "Prepare"
-    self.CurrentWave = 0
-    self.MatchStartTime = time()
+    self.State = "Active"
     self.ResultReason = "Unknown"
+    self.MatchStartTime = time()
+    self.BossSpawned = false
+    self.EnrageTriggered = false
+    self.AwardedMilestones = {}
 
     self.RewardService:ResetAll()
-    self.EnemyService:StartMatch()
+    self.EnemyService:StartMatch(self.MatchStartTime)
 
-    for countdown = Config.Session.PrepareDuration, 1, -1 do
-        Net:FireAll("HUD", {
-            State = "Prepare",
-            Countdown = countdown,
-            Wave = self.CurrentWave,
-            RemainingEnemies = self.EnemyService:GetRemainingEnemies(),
-            TimeRemaining = self:GetTimeRemaining(),
-        })
-        task.wait(1)
+    if self.BossService and self.BossService.StartSession then
+        self.BossService:StartSession(self.MatchStartTime)
     end
 
-    self.State = "Active"
-    self.MatchStartTime = time()
+    local milestoneTimes = {}
+    for threshold in pairs(Config.Rewards.MilestoneGold or {}) do
+        table.insert(milestoneTimes, threshold)
+    end
+    table.sort(milestoneTimes)
 
-    task.spawn(function()
-        while self.State == "Active" do
-            Net:FireAll("HUD", self:GetHUDPayload())
-            task.wait(1)
-        end
-    end)
+    Net:FireAll("HUD", self:GetHUDPayload(0))
+
+    local nextHudUpdate = 0
 
     while self.State == "Active" do
-        self.CurrentWave = self.CurrentWave + 1
-        Net:FireAll("GameState", {
-            Type = "WaveStart",
-            Wave = self.CurrentWave,
-        })
+        local now = time()
+        local elapsed = math.max(0, now - self.MatchStartTime)
 
-        self.EnemyService:BeginWave(self.CurrentWave)
-
-        local waveFinished = false
-        local connection
-        connection = self.EnemyService.WaveCleared:Connect(function()
-            waveFinished = true
-        end)
-
-        while not waveFinished do
-            if self:CheckForSessionEnd() then
-                waveFinished = true
-                break
+        for _, threshold in ipairs(milestoneTimes) do
+            if elapsed >= threshold and not self.AwardedMilestones[threshold] then
+                self.AwardedMilestones[threshold] = true
+                self.RewardService:GrantMilestoneRewards(threshold)
             end
-
-            if not self.EnemyService:IsSpawning() and self.EnemyService:GetRemainingEnemies() <= 0 then
-                waveFinished = true
-                break
-            end
-
-            task.wait(0.5)
         end
 
-        if connection then
-            connection:Disconnect()
-        end
-
-        if self.State ~= "Active" then
+        if self.EnrageTriggered then
+            if self.ResultReason == "Unknown" then
+                self.ResultReason = "Boss enraged"
+            end
+            self.State = "Ended"
             break
         end
 
-        self.RewardService:AddWaveClearRewards(self.CurrentWave)
-        Net:FireAll("HUD", self:GetHUDPayload())
-
-        if self:CheckForSessionEnd() then
+        if self:CheckForSessionEnd(elapsed) then
             break
         end
 
-        task.wait(Config.Session.WaveInterval)
+        if now >= nextHudUpdate then
+            Net:FireAll("HUD", self:GetHUDPayload(elapsed))
+            nextHudUpdate = now + 1
+        end
+
+        task.wait(0.1)
     end
 
     self:FinalizeSession(self.ResultReason)
 end
 
-function GameStateService:GetHUDPayload()
+function GameStateService:GetHUDPayload(elapsed: number?)
+    elapsed = elapsed or math.max(0, time() - (self.MatchStartTime or time()))
     return {
         State = self.State,
-        Wave = self.CurrentWave,
-        RemainingEnemies = self.EnemyService:GetRemainingEnemies(),
-        TimeRemaining = self:GetTimeRemaining(),
+        RemainingEnemies = self.EnemyService and self.EnemyService:GetRemainingEnemies() or 0,
+        TimeRemaining = self:GetTimeRemaining(elapsed),
+        Elapsed = elapsed,
         Countdown = 0,
     }
 end
 
-function GameStateService:GetTimeRemaining()
+function GameStateService:GetTimeRemaining(elapsed: number?)
     if Config.Session.Infinite then
         return -1
     end
 
-    local elapsed = time() - self.MatchStartTime
-    return math.max(0, Config.Session.TimeLimit - elapsed)
+    elapsed = elapsed or (time() - self.MatchStartTime)
+    return math.max(0, Config.Session.TimeLimit - (elapsed or 0))
 end
 
-function GameStateService:CheckForSessionEnd()
+function GameStateService:CheckForSessionEnd(elapsed: number?)
     local alivePlayers = self:GetAlivePlayerCount()
     if alivePlayers <= 0 then
         self.ResultReason = "All players down"
@@ -301,7 +367,7 @@ function GameStateService:CheckForSessionEnd()
     end
 
     if not Config.Session.Infinite then
-        local elapsed = time() - self.MatchStartTime
+        elapsed = elapsed or (time() - self.MatchStartTime)
         if elapsed >= Config.Session.TimeLimit then
             self.ResultReason = "Time limit"
             self.State = "Ended"
@@ -332,19 +398,21 @@ function GameStateService:FinalizeSession(reason: string)
     self.ResultReason = reason
     self.State = "Results"
     self.EnemyService:StopAll()
+    if self.BossService and self.BossService.StopSession then
+        self.BossService:StopSession()
+    end
     self.RewardService:FinalizeMatch(reason)
 
     Net:FireAll("HUD", {
         State = self.State,
-        Wave = self.CurrentWave,
         RemainingEnemies = 0,
         TimeRemaining = 0,
+        Elapsed = math.max(0, time() - (self.MatchStartTime or time())),
         Countdown = 0,
     })
 
     for _, player in ipairs(Players:GetPlayers()) do
         local summary = self.RewardService:GetSummary(player)
-        summary.Wave = self.CurrentWave
         summary.TimeSurvived = math.floor(time() - self.MatchStartTime)
         Net:FireClient(player, "Result", summary)
     end

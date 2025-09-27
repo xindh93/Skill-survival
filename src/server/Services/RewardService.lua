@@ -40,9 +40,10 @@ function RewardService:SetupPlayer(player: Player)
         Gold = 0,
         XP = 0,
         Kills = 0,
-        WavesCleared = 0,
         DamageDealt = 0,
         Assists = 0,
+        MilestonesReached = 0,
+        Milestones = {},
     }
     self:PushStats(player)
 end
@@ -56,9 +57,10 @@ function RewardService:ResetPlayer(player: Player)
     stats.Gold = 0
     stats.XP = 0
     stats.Kills = 0
-    stats.WavesCleared = 0
     stats.DamageDealt = 0
     stats.Assists = 0
+    stats.MilestonesReached = 0
+    stats.Milestones = {}
     self:PushStats(player)
 end
 
@@ -128,12 +130,29 @@ function RewardService:RecordDamage(player: Player, amount: number)
     stats.DamageDealt = stats.DamageDealt + amount
 end
 
-function RewardService:AddWaveClearRewards(wave: number)
+function RewardService:GrantMilestoneRewards(threshold: number)
+    if typeof(threshold) ~= "number" then
+        return
+    end
+
+    local amount = Config.Rewards.MilestoneGold and Config.Rewards.MilestoneGold[threshold]
+    if typeof(amount) ~= "number" or amount <= 0 then
+        return
+    end
+
     for player, stats in pairs(self.PlayerStats) do
-        stats.WavesCleared = math.max(stats.WavesCleared, wave)
-        stats.Gold = stats.Gold + Config.Rewards.WaveClearGold
-        stats.XP = stats.XP + Config.Rewards.WaveClearXP
-        self:PushStats(player)
+        local milestones = stats.Milestones
+        if typeof(milestones) ~= "table" then
+            milestones = {}
+            stats.Milestones = milestones
+        end
+
+        if not milestones[threshold] then
+            milestones[threshold] = true
+            stats.MilestonesReached = (stats.MilestonesReached or 0) + 1
+            stats.Gold = stats.Gold + amount
+            self:PushStats(player)
+        end
     end
 end
 
@@ -165,9 +184,9 @@ function RewardService:GetSummary(player: Player): Types.RewardSummary
         Gold = stats.Gold,
         XP = stats.XP,
         Kills = stats.Kills,
-        WavesCleared = stats.WavesCleared,
         DamageDealt = stats.DamageDealt,
         Assists = stats.Assists,
+        MilestonesReached = stats.MilestonesReached,
         Reason = reason,
     }
 end

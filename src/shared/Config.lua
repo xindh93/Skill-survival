@@ -3,16 +3,17 @@ local Config = {}
 Config.LOBBY_PLACE_ID = 0
 
 Config.Session = {
-    PrepareDuration = 5,
-    WaveInterval = 8,
-    ResultDuration = 12,
     TimeLimit = 600,
     Infinite = false,
+    BossTime = 480,
+    EnrageTime = 600,
+    PulseInterval = 30,
+    SurgeTimes = {120, 240, 360},
+    SurgeDuration = 10,
+    ResultDuration = 12,
 }
 
 Config.Enemy = {
-    BaseCount = 4,
-    CountGrowth = 2,
     BaseHealth = 70,
     HealthGrowthRate = 0.25,
     BaseSpeed = 12,
@@ -21,8 +22,19 @@ Config.Enemy = {
     BaseDamage = 10,
     DamageGrowth = 1.5,
     SpawnInterval = 5,
+    PulseBonus = 3,
+    SurgeIntervalMult = 0.8,
+    EliteChanceStart = 0.15,
+    EliteChanceAfter6m = 0.30,
     MaxActive = 80,
+    BossPhaseMaxActive = 60,
     PathRefresh = 0.25,
+    Spawn = {
+        MinSpawnDistance = 40,
+        PortalCooldown = 1.0,
+        Separation = 6,
+        MaxSpawnAttempts = 8,
+    },
 }
 
 Config.Combat = {
@@ -36,8 +48,11 @@ Config.Combat = {
 Config.Rewards = {
     KillGold = 6,
     KillXP = 8,
-    WaveClearGold = 15,
-    WaveClearXP = 25,
+    MilestoneGold = {
+        [120] = 10,
+        [240] = 15,
+        [360] = 20,
+    },
     ResultXPBonus = 100,
 }
 
@@ -60,36 +75,6 @@ Config.Skill.Dash = Config.Skill.Dash or {
 -- =========================
 -- Stage / Boss / Enrage
 -- =========================
-Config.Stage = Config.Stage or {}
-Config.Stage.Timings = Config.Stage.Timings or {
-    -- 기본 프로덕션 값: 8분 보스, 10분 광폭화
-    BossSpawnAtSeconds = 480,
-
-    -- 광폭화 계산 방식
-    -- true: 보스 등장 후 EnrageAfterBossSeconds 뒤에 광폭화
-    -- false: 절대 시각 EnrageAtSeconds에 광폭화
-    UseRelativeEnrage = true,
-    EnrageAfterBossSeconds = 120, -- UseRelativeEnrage=true일 때 사용
-    EnrageAtSeconds = 600,        -- UseRelativeEnrage=false일 때 사용
-}
-
--- =========================================
--- 테스트용 오버라이드 (끝나면 false로)
--- 보스 60초, 보스 후 30초(=90초)에 광폭화
--- =========================================
-do
-    local TESTING = true -- 테스트 종료 시 false
-    if TESTING then
-        Config.Stage.Timings.BossSpawnAtSeconds = 60
-        Config.Stage.Timings.UseRelativeEnrage = true
-        Config.Stage.Timings.EnrageAfterBossSeconds = 30
-        -- 절대 시간으로 테스트하려면 아래처럼:
-        -- Config.Stage.Timings.UseRelativeEnrage = false
-        -- Config.Stage.Timings.EnrageAtSeconds = 90
-    end
-end
-
-
 Config.UI = Config.UI or {}
 
 local ui = Config.UI

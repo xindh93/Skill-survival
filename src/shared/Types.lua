@@ -4,9 +4,10 @@ export type PlayerStats = {
     Gold: number,
     XP: number,
     Kills: number,
-    WavesCleared: number,
+    MilestonesReached: number,
     DamageDealt: number,
     Assists: number,
+    Milestones: {[number]: boolean},
 }
 
 export type EnemyStats = {

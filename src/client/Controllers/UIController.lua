@@ -12,13 +12,17 @@ local UIController = Knit.CreateController({
 
 function UIController:KnitInit()
     self.State = {
-        State = "Prepare",
-        Wave = 0,
+        State = "Idle",
         RemainingEnemies = 0,
         TimeRemaining = -1,
         Countdown = 0,
         Gold = 0,
         XP = 0,
+        Elapsed = 0,
+        Kills = 0,
+        DamageDealt = 0,
+        Assists = 0,
+        MilestonesReached = 0,
         Level = 1,
         XPProgress = nil,
         SkillCooldowns = {},
@@ -102,9 +106,7 @@ function UIController:KnitStart()
     end)
 
     Net:GetEvent("GameState").OnClientEvent:Connect(function(data)
-        if data.Type == "WaveStart" then
-            self:WithHUD("PlayWaveAnnouncement", data.Wave)
-        elseif data.Type == "TeleportFailed" then
+        if data.Type == "TeleportFailed" then
             self:WithHUD("ShowMessage", "Teleport failed: " .. tostring(data.Message))
         end
     end)
@@ -315,6 +317,10 @@ function UIController:ApplyHUDUpdate(payload)
             self.State.XPProgress = value
         elseif key == "Level" then
             self.State.Level = value
+        elseif key == "Elapsed" then
+            if typeof(value) == "number" then
+                self.State.Elapsed = math.max(0, value)
+            end
         elseif key == "TimeRemaining" then
             if typeof(value) == "number" then
                 if value >= 0 then
