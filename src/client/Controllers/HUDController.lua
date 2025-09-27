@@ -130,12 +130,31 @@ local function resolveCooldownSlot(root: Instance?)
         return nil
     end
 
-    local slot = root:FindFirstChild("Slot")
-    local gauge = slot and slot:FindFirstChild("Gauge")
-    local cooldownLabel = gauge and gauge:FindFirstChild("CooldownLabel")
-    local keyLabel = gauge and gauge:FindFirstChild("KeyLabel")
+    local slot = root:FindFirstChild("Slot") or root:FindFirstChild("Slot", true)
+    local gauge = slot and (slot:FindFirstChild("Gauge") or slot:FindFirstChild("Gauge", true))
+        or root:FindFirstChild("Gauge")
+        or root:FindFirstChild("Gauge", true)
+    local cooldownLabel = gauge and (gauge:FindFirstChild("CooldownLabel") or gauge:FindFirstChild("CooldownLabel", true))
+    local keyLabel = gauge and (gauge:FindFirstChild("KeyLabel") or gauge:FindFirstChild("KeyLabel", true))
 
-    if not (slot and gauge and cooldownLabel and keyLabel) then
+    if not gauge then
+        gauge = root:FindFirstChildWhichIsA("Frame", true)
+    end
+
+    if not cooldownLabel and gauge then
+        cooldownLabel = gauge:FindFirstChildWhichIsA("TextLabel", true)
+    end
+
+    if not keyLabel and gauge then
+        for _, descendant in ipairs(gauge:GetDescendants()) do
+            if descendant:IsA("TextLabel") and string.match(descendant.Name:lower(), "key") then
+                keyLabel = descendant
+                break
+            end
+        end
+    end
+
+    if not (gauge and cooldownLabel and keyLabel) then
         return nil
     end
 
@@ -184,13 +203,13 @@ function HUDController:CaptureInterfaceElements(screen: ScreenGui, abilityConfig
     local reservedLabel = reservedAlert and reservedAlert:FindFirstChild("ReservedLabel")
 
     local abilityFrame = safeFrame:FindFirstChild("AbilityFrame")
-    local skillSlot = abilityFrame and abilityFrame:FindFirstChild("SkillSlot")
-    local dashSlot = abilityFrame and abilityFrame:FindFirstChild("DashSlot")
+    local skillSlot = abilityFrame and (abilityFrame:FindFirstChild("SkillSlot") or abilityFrame:FindFirstChild("SkillSlot", true))
+    local dashSlot = abilityFrame and (abilityFrame:FindFirstChild("DashSlot") or abilityFrame:FindFirstChild("DashSlot", true))
 
     local skill = resolveCooldownSlot(skillSlot)
     local dash = resolveCooldownSlot(dashSlot)
 
-    if not (skill and dash) then
+    if not skill and not dash then
         warn("HUDController: Ability slots missing or malformed")
         self.Screen = screen
         self.Elements = {}
@@ -371,26 +390,46 @@ function HUDController:CaptureInterfaceElements(screen: ScreenGui, abilityConfig
         end
     end
 
-    skill.Container.Size = UDim2.new(0, skillSlotSize, 0, skillSlotSize)
-    dash.Container.Size = UDim2.new(0, dashSize, 0, dashSize)
-
-    skill.Gauge.BackgroundColor3 = abilityConfig.SkillBackgroundColor or Color3.fromRGB(18, 24, 32)
-    skill.Gauge.BackgroundTransparency = abilityConfig.SkillBackgroundTransparency or 0.25
-    local skillStroke = skill.Gauge:FindFirstChildWhichIsA("UIStroke")
-    if skillStroke then
-        skillStroke.Color = abilityConfig.SkillStrokeColor or Color3.fromRGB(255, 196, 110)
-        skillStroke.Thickness = abilityConfig.SkillStrokeThickness or 2
-        skillStroke.Transparency = abilityConfig.SkillStrokeTransparency or 0.2
-        skillStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    if skill then
+        skill.Container.Size = UDim2.new(0, skillSlotSize, 0, skillSlotSize)
+        skill.Gauge.BackgroundColor3 = abilityConfig.SkillBackgroundColor or Color3.fromRGB(18, 24, 32)
+        skill.Gauge.BackgroundTransparency = abilityConfig.SkillBackgroundTransparency or 0.25
+        local skillStroke = skill.Gauge:FindFirstChildWhichIsA("UIStroke")
+        if skillStroke then
+            skillStroke.Color = abilityConfig.SkillStrokeColor or Color3.fromRGB(255, 196, 110)
+            skillStroke.Thickness = abilityConfig.SkillStrokeThickness or 2
+            skillStroke.Transparency = abilityConfig.SkillStrokeTransparency or 0.2
+            skillStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+        end
+        if skill.CooldownLabel then
+            skill.CooldownLabel.TextTransparency = 0
+            skill.CooldownLabel.Visible = true
+        end
+        if skill.KeyLabel then
+            skill.KeyLabel.TextTransparency = 0
+            skill.KeyLabel.Visible = true
+        end
     end
-    dash.Gauge.BackgroundColor3 = dashConfig.BackgroundColor or Color3.fromRGB(18, 24, 32)
-    dash.Gauge.BackgroundTransparency = dashConfig.BackgroundTransparency or 0.25
-    local dashStroke = dash.Gauge:FindFirstChildWhichIsA("UIStroke")
-    if dashStroke then
-        dashStroke.Color = dashConfig.StrokeColor or Color3.fromRGB(120, 200, 255)
-        dashStroke.Thickness = dashConfig.StrokeThickness or 2
-        dashStroke.Transparency = dashConfig.StrokeTransparency or 0.2
-        dashStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+
+    if dash then
+        dash.Container.Size = UDim2.new(0, dashSize, 0, dashSize)
+        dash.Gauge.BackgroundColor3 = dashConfig.BackgroundColor or Color3.fromRGB(18, 24, 32)
+        dash.Gauge.BackgroundTransparency = dashConfig.BackgroundTransparency or 0.25
+        local dashStroke = dash.Gauge:FindFirstChildWhichIsA("UIStroke")
+        if dashStroke then
+            dashStroke.Color = dashConfig.StrokeColor or Color3.fromRGB(120, 200, 255)
+            dashStroke.Thickness = dashConfig.StrokeThickness or 2
+            dashStroke.Transparency = dashConfig.StrokeTransparency or 0.2
+            dashStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+        end
+        if dash.CooldownLabel then
+            dash.CooldownLabel.TextTransparency = 0
+            dash.CooldownLabel.Visible = true
+        end
+        if dash.KeyLabel then
+            dash.KeyLabel.TextTransparency = 0
+            dash.KeyLabel.Visible = true
+        end
     end
 
     self.Screen = screen
@@ -413,21 +452,29 @@ function HUDController:CaptureInterfaceElements(screen: ScreenGui, abilityConfig
     self.DashReadyText = dashReadyText
     self.DashReadyColor = dashConfig.ReadyColor or Color3.fromRGB(180, 255, 205)
 
-    skill.KeyLabel.Text = self.SkillDisplayKey
-    skill.CooldownLabel.Text = self.SkillReadyText
-    skill.CooldownLabel.TextColor3 = self.SkillReadyColor
-    dash.KeyLabel.Text = dashConfig.KeyText or "E"
-    dash.CooldownLabel.Text = self.DashReadyText
-    dash.CooldownLabel.TextColor3 = self.DashReadyColor
+    if skill and skill.KeyLabel then
+        skill.KeyLabel.Text = self.SkillDisplayKey
+    end
+    if skill and skill.CooldownLabel then
+        skill.CooldownLabel.Text = self.SkillReadyText
+        skill.CooldownLabel.TextColor3 = self.SkillReadyColor
+    end
+    if dash and dash.KeyLabel then
+        dash.KeyLabel.Text = dashConfig.KeyText or "E"
+    end
+    if dash and dash.CooldownLabel then
+        dash.CooldownLabel.Text = self.DashReadyText
+        dash.CooldownLabel.TextColor3 = self.DashReadyColor
+    end
 
     self.Elements = {
         WaveLabel = waveLabel,
         EnemyLabel = enemyLabel,
         TimerLabel = timerLabel,
         GoldLabel = goldLabel,
-        SkillCooldownLabel = skill.CooldownLabel,
-        SkillKeyLabel = skill.KeyLabel,
-        DashCooldownLabel = dash.CooldownLabel,
+        SkillCooldownLabel = skill and skill.CooldownLabel or nil,
+        SkillKeyLabel = skill and skill.KeyLabel or nil,
+        DashCooldownLabel = dash and dash.CooldownLabel or nil,
         MessageLabel = messageLabel,
         WaveAnnouncement = waveAnnouncement,
         ReservedAlert = reservedAlert,
@@ -521,20 +568,21 @@ function HUDController:UpdateXP(state)
     local prefix = xpConfig.LabelPrefix or "XP"
     prefix = string.gsub(prefix, "^%s+", "")
     prefix = string.gsub(prefix, "%s+$", "")
+
     local joiner = xpConfig.LabelJoiner
     if joiner == nil then
         joiner = ""
-        joiner = " "
     else
         joiner = tostring(joiner)
     end
+
     local levelJoiner = xpConfig.LevelJoiner
     if levelJoiner == nil then
         levelJoiner = ""
-        levelJoiner = " "
     else
         levelJoiner = tostring(levelJoiner)
     end
+
     local function composeXPText(valueText: string): string
         if prefix ~= "" then
             return prefix .. joiner .. valueText
@@ -547,19 +595,6 @@ function HUDController:UpdateXP(state)
         levelLabel.Text = string.format("Lv%s%d", levelJoiner, math.max(1, math.floor(levelValue + 0.5)))
     else
         levelLabel.Text = string.format("Lv%s1", levelJoiner)
-    local function composeXPText(valueText: string): string
-        if prefix ~= "" then
-            return string.format("%s %s", prefix, valueText)
-        end
-        return valueText
-    end
-    prefix = string.gsub(prefix, "%s+$", "")
-
-    local levelValue = tonumber(state.Level)
-    if levelValue then
-        levelLabel.Text = string.format("Lv%d", math.max(1, math.floor(levelValue + 0.5)))
-    else
-        levelLabel.Text = "Lv1"
     end
 
     local progress = state.XPProgress
@@ -612,25 +647,6 @@ function HUDController:UpdateXP(state)
         xpLabel.Text = composeXPText(string.format("%d", math.floor(totalXP + 0.5)))
     else
         xpLabel.Text = composeXPText("0")
-    elseif ratio > 0 then
-        xpLabel.Text = composeXPText(string.format("%d%%", math.floor(ratio * 100 + 0.5)))
-    elseif typeof(totalXP) == "number" then
-        xpLabel.Text = composeXPText(string.format("%d", math.floor(totalXP + 0.5)))
-    else
-        xpLabel.Text = composeXPText("0")
-    elseif ratio > 0 then
-        xpLabel.Text = composeXPText(string.format("%d%%", math.floor(ratio * 100 + 0.5)))
-    elseif typeof(totalXP) == "number" then
-        xpLabel.Text = composeXPText(string.format("%d", math.floor(totalXP + 0.5)))
-    else
-        xpLabel.Text = composeXPText("0")
-        xpLabel.Text = string.format("%s%d/%d", prefix, math.floor(current + 0.5), math.floor(required + 0.5))
-    elseif ratio > 0 then
-        xpLabel.Text = string.format("%s%d%%", prefix, math.floor(ratio * 100 + 0.5))
-    elseif typeof(totalXP) == "number" then
-        xpLabel.Text = string.format("%s%d", prefix, math.floor(totalXP + 0.5))
-    else
-        xpLabel.Text = string.format("%s0", prefix)
     end
 end
 
