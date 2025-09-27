@@ -521,18 +521,30 @@ function HUDController:UpdateXP(state)
     local prefix = xpConfig.LabelPrefix or "XP"
     prefix = string.gsub(prefix, "^%s+", "")
     prefix = string.gsub(prefix, "%s+$", "")
+    local joiner = xpConfig.LabelJoiner
+    if joiner == nil then
+        joiner = " "
+    else
+        joiner = tostring(joiner)
+    end
+    local levelJoiner = xpConfig.LevelJoiner
+    if levelJoiner == nil then
+        levelJoiner = " "
+    else
+        levelJoiner = tostring(levelJoiner)
+    end
     local function composeXPText(valueText: string): string
         if prefix ~= "" then
-            return prefix .. valueText
+            return prefix .. joiner .. valueText
         end
         return valueText
     end
 
     local levelValue = tonumber(state.Level)
     if levelValue then
-        levelLabel.Text = string.format("Lv%d", math.max(1, math.floor(levelValue + 0.5)))
+        levelLabel.Text = string.format("Lv%s%d", levelJoiner, math.max(1, math.floor(levelValue + 0.5)))
     else
-        levelLabel.Text = "Lv1"
+        levelLabel.Text = string.format("Lv%s1", levelJoiner)
     end
 
     local progress = state.XPProgress
