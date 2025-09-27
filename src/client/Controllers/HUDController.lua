@@ -451,7 +451,7 @@ function HUDController:CaptureInterfaceElements(screen: ScreenGui, abilityConfig
     self.SkillDisplayKey = abilityConfig.SkillKey or "Q"
     local skillReadyText = abilityConfig.SkillReadyText
     if skillReadyText == nil then
-        skillReadyText = "0.0"
+        skillReadyText = "ready"
     else
         skillReadyText = tostring(skillReadyText)
     end
@@ -460,7 +460,7 @@ function HUDController:CaptureInterfaceElements(screen: ScreenGui, abilityConfig
     self.PrimarySkillId = abilityConfig.PrimarySkillId or "AOE_Blast"
     local dashReadyText = dashConfig.ReadyText
     if dashReadyText == nil then
-        dashReadyText = "0.0"
+        dashReadyText = "ready"
     else
         dashReadyText = tostring(dashReadyText)
     end
