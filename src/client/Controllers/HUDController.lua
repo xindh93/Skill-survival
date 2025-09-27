@@ -523,12 +523,14 @@ function HUDController:UpdateXP(state)
     prefix = string.gsub(prefix, "%s+$", "")
     local joiner = xpConfig.LabelJoiner
     if joiner == nil then
+        joiner = ""
         joiner = " "
     else
         joiner = tostring(joiner)
     end
     local levelJoiner = xpConfig.LevelJoiner
     if levelJoiner == nil then
+        levelJoiner = ""
         levelJoiner = " "
     else
         levelJoiner = tostring(levelJoiner)
@@ -604,6 +606,12 @@ function HUDController:UpdateXP(state)
 
     if required > 0 then
         xpLabel.Text = composeXPText(string.format("%d/%d", math.floor(current + 0.5), math.floor(required + 0.5)))
+    elseif ratio > 0 then
+        xpLabel.Text = composeXPText(string.format("%d%%", math.floor(ratio * 100 + 0.5)))
+    elseif typeof(totalXP) == "number" then
+        xpLabel.Text = composeXPText(string.format("%d", math.floor(totalXP + 0.5)))
+    else
+        xpLabel.Text = composeXPText("0")
     elseif ratio > 0 then
         xpLabel.Text = composeXPText(string.format("%d%%", math.floor(ratio * 100 + 0.5)))
     elseif typeof(totalXP) == "number" then
