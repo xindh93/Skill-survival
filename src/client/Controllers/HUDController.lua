@@ -407,10 +407,22 @@ function HUDController:CaptureInterfaceElements(screen: ScreenGui, abilityConfig
 
     self.Screen = screen
     self.SkillDisplayKey = abilityConfig.SkillKey or "Q"
-    self.SkillReadyText = abilityConfig.SkillReadyText or "Ready"
+    local skillReadyText = abilityConfig.SkillReadyText
+    if skillReadyText == nil then
+        skillReadyText = "0"
+    else
+        skillReadyText = tostring(skillReadyText)
+    end
+    self.SkillReadyText = skillReadyText
     self.SkillReadyColor = abilityConfig.SkillReadyColor or Color3.fromRGB(255, 235, 200)
     self.PrimarySkillId = abilityConfig.PrimarySkillId or "AOE_Blast"
-    self.DashReadyText = dashConfig.ReadyText or "Ready"
+    local dashReadyText = dashConfig.ReadyText
+    if dashReadyText == nil then
+        dashReadyText = "0"
+    else
+        dashReadyText = tostring(dashReadyText)
+    end
+    self.DashReadyText = dashReadyText
     self.DashReadyColor = dashConfig.ReadyColor or Color3.fromRGB(180, 255, 205)
 
     skill.KeyLabel.Text = self.SkillDisplayKey
@@ -624,6 +636,7 @@ function HUDController:UpdateSkillCooldowns(skillTable)
         if typeof(info.Cooldown) == "number" then
             cooldown = math.max(0, info.Cooldown)
         end
+
         if typeof(info.ReadyTime) == "number" then
             local now = Workspace:GetServerTimeNow()
             remaining = math.max(0, info.ReadyTime - now)
@@ -644,9 +657,13 @@ function HUDController:UpdateSkillCooldowns(skillTable)
     if remaining > 0.05 then
         cooldownLabel.Text = tostring(math.ceil(remaining))
         cooldownLabel.TextColor3 = Color3.new(1, 1, 1)
+        cooldownLabel.TextStrokeTransparency = 0.6
+        cooldownLabel.Visible = true
     else
         cooldownLabel.Text = readyText
         cooldownLabel.TextColor3 = readyColor
+        cooldownLabel.TextStrokeTransparency = 0.6
+        cooldownLabel.Visible = true
     end
 end
 
@@ -673,9 +690,14 @@ function HUDController:UpdateDashCooldown(dashData)
     if remaining <= 0.05 then
         dashCooldownLabel.Text = readyText
         dashCooldownLabel.TextColor3 = readyColor
+        dashCooldownLabel.TextStrokeTransparency = 0.6
+        dashCooldownLabel.Visible = true
     else
         dashCooldownLabel.Text = tostring(math.ceil(remaining))
         dashCooldownLabel.TextColor3 = Color3.new(1, 1, 1)
+        dashCooldownLabel.TextStrokeTransparency = 0.6
+        dashCooldownLabel.Visible = true
+
     end
 end
 
