@@ -135,6 +135,7 @@ local function resolveCooldownSlot(root: Instance?)
         or root:FindFirstChild("Gauge")
         or root:FindFirstChild("Gauge", true)
     local cooldownLabel = gauge and (gauge:FindFirstChild("CooldownLabel") or gauge:FindFirstChild("CooldownLabel", true))
+    local overlay = gauge and (gauge:FindFirstChild("CooldownOverlay") or gauge:FindFirstChild("CooldownOverlay", true))
     local keyLabel = gauge and (gauge:FindFirstChild("KeyLabel") or gauge:FindFirstChild("KeyLabel", true))
 
     if not gauge then
@@ -163,6 +164,7 @@ local function resolveCooldownSlot(root: Instance?)
         Gauge = gauge,
         CooldownLabel = cooldownLabel,
         KeyLabel = keyLabel,
+        Overlay = overlay,
     }
 end
 
@@ -191,12 +193,14 @@ function HUDController:CaptureInterfaceElements(screen: ScreenGui, abilityConfig
     local goldLabel = statusPanel and statusPanel:FindFirstChild("GoldLabel")
 
     local xpHeader = xpPanel and xpPanel:FindFirstChild("XPHeader")
+    local xpHeaderLayout = xpHeader and xpHeader:FindFirstChildWhichIsA("UIListLayout")
     local xpLabel = xpHeader and xpHeader:FindFirstChild("XPText")
     local levelLabel = xpHeader and xpHeader:FindFirstChild("LevelLabel")
     local xpBar = xpPanel and xpPanel:FindFirstChild("XPBar")
     local xpFill = xpBar and xpBar:FindFirstChild("Fill")
 
     local alertArea = safeFrame:FindFirstChild("AlertArea")
+    local countdownLabel = alertArea and alertArea:FindFirstChild("CountdownLabel")
     local waveAnnouncement = alertArea and alertArea:FindFirstChild("WaveAnnouncement")
     local messageLabel = alertArea and alertArea:FindFirstChild("MessageLabel")
     local reservedAlert = alertArea and alertArea:FindFirstChild("ReservedAlerts")
@@ -316,12 +320,23 @@ function HUDController:CaptureInterfaceElements(screen: ScreenGui, abilityConfig
         if xpHeader then
             xpHeader.Size = UDim2.new(1, 0, 0, uiConfig.XP and uiConfig.XP.LabelHeight or 24)
         end
+        local headerPadding = 8
+        if xpHeaderLayout and xpHeaderLayout.Padding then
+            headerPadding = xpHeaderLayout.Padding.Offset or headerPadding
+        end
+        local levelWidth = (uiConfig.XP and uiConfig.XP.LevelWidth) or 60
         if xpLabel then
             xpLabel.TextSize = uiConfig.XP and uiConfig.XP.LabelTextSize or infoTextSize
+            xpLabel.Size = UDim2.new(1, -(levelWidth + headerPadding), 1, 0)
         end
         if levelLabel then
             levelLabel.TextSize = uiConfig.XP and uiConfig.XP.LevelTextSize or alertTextSize
-            levelLabel.Size = UDim2.new(0, (uiConfig.XP and uiConfig.XP.LevelWidth) or 60, 1, 0)
+            levelLabel.TextXAlignment = Enum.TextXAlignment.Left
+            if xpLabel then
+                levelLabel.Size = UDim2.new(0, levelWidth, 1, 0)
+            else
+                levelLabel.Size = UDim2.new(1, 0, 1, 0)
+            end
         end
         if xpBar then
             xpBar.BackgroundColor3 = uiConfig.XP and uiConfig.XP.BackgroundColor or panelBackground
@@ -393,13 +408,19 @@ function HUDController:CaptureInterfaceElements(screen: ScreenGui, abilityConfig
     if skill then
         skill.Container.Size = UDim2.new(0, skillSlotSize, 0, skillSlotSize)
         skill.Gauge.BackgroundColor3 = abilityConfig.SkillBackgroundColor or Color3.fromRGB(18, 24, 32)
-        skill.Gauge.BackgroundTransparency = abilityConfig.SkillBackgroundTransparency or 0.25
+        skill.Gauge.BackgroundTransparency = abilityConfig.SkillBackgroundTransparency or 0.2
         local skillStroke = skill.Gauge:FindFirstChildWhichIsA("UIStroke")
         if skillStroke then
             skillStroke.Color = abilityConfig.SkillStrokeColor or Color3.fromRGB(255, 196, 110)
             skillStroke.Thickness = abilityConfig.SkillStrokeThickness or 2
             skillStroke.Transparency = abilityConfig.SkillStrokeTransparency or 0.2
             skillStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+        end
+        if skill.Overlay then
+            skill.Overlay.BackgroundColor3 = abilityConfig.SkillCooldownOverlayColor or Color3.new(0, 0, 0)
+            skill.Overlay.BackgroundTransparency = abilityConfig.SkillCooldownOverlayTransparency or 0.35
+            skill.Overlay.Visible = false
+            skill.Overlay.Size = UDim2.new(1, 0, 0, 0)
         end
         if skill.CooldownLabel then
             skill.CooldownLabel.TextTransparency = 0
@@ -414,13 +435,19 @@ function HUDController:CaptureInterfaceElements(screen: ScreenGui, abilityConfig
     if dash then
         dash.Container.Size = UDim2.new(0, dashSize, 0, dashSize)
         dash.Gauge.BackgroundColor3 = dashConfig.BackgroundColor or Color3.fromRGB(18, 24, 32)
-        dash.Gauge.BackgroundTransparency = dashConfig.BackgroundTransparency or 0.25
+        dash.Gauge.BackgroundTransparency = dashConfig.BackgroundTransparency or 0.2
         local dashStroke = dash.Gauge:FindFirstChildWhichIsA("UIStroke")
         if dashStroke then
             dashStroke.Color = dashConfig.StrokeColor or Color3.fromRGB(120, 200, 255)
             dashStroke.Thickness = dashConfig.StrokeThickness or 2
             dashStroke.Transparency = dashConfig.StrokeTransparency or 0.2
             dashStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+        end
+        if dash.Overlay then
+            dash.Overlay.BackgroundColor3 = dashConfig.CooldownOverlayColor or Color3.new(0, 0, 0)
+            dash.Overlay.BackgroundTransparency = dashConfig.CooldownOverlayTransparency or 0.35
+            dash.Overlay.Visible = false
+            dash.Overlay.Size = UDim2.new(1, 0, 0, 0)
         end
         if dash.CooldownLabel then
             dash.CooldownLabel.TextTransparency = 0
@@ -474,9 +501,12 @@ function HUDController:CaptureInterfaceElements(screen: ScreenGui, abilityConfig
         GoldLabel = goldLabel,
         SkillCooldownLabel = skill and skill.CooldownLabel or nil,
         SkillKeyLabel = skill and skill.KeyLabel or nil,
+        SkillCooldownOverlay = skill and skill.Overlay or nil,
         DashCooldownLabel = dash and dash.CooldownLabel or nil,
+        DashCooldownOverlay = dash and dash.Overlay or nil,
         MessageLabel = messageLabel,
         WaveAnnouncement = waveAnnouncement,
+        CountdownLabel = countdownLabel,
         ReservedAlert = reservedAlert,
         ReservedAlertLabel = reservedLabel,
         XPFill = xpFill,
@@ -516,6 +546,57 @@ local function formatTime(seconds: number): string
     return string.format("%02d:%02d", minutes, remaining)
 end
 
+local function formatCooldownValue(remaining: number): string
+    if remaining <= 5 then
+        local display = math.floor((remaining * 10) + 0.5) / 10
+        return string.format("%.1f", display)
+    end
+
+    local display = math.floor(remaining + 0.5)
+    return tostring(display)
+end
+
+local function applyCooldownVisual(
+    label: TextLabel?,
+    overlay: Frame?,
+    readyText: string,
+    readyColor: Color3,
+    remaining: number,
+    totalDuration: number?
+)
+    if not label then
+        return
+    end
+
+    remaining = math.max(0, remaining or 0)
+
+    if remaining <= 0.05 then
+        label.Text = readyText
+        label.TextColor3 = readyColor
+        label.TextStrokeTransparency = 0.6
+        label.Visible = true
+        if overlay then
+            overlay.Visible = false
+            overlay.Size = UDim2.new(1, 0, 0, 0)
+        end
+        return
+    end
+
+    label.Text = formatCooldownValue(remaining)
+    label.TextColor3 = Color3.new(1, 1, 1)
+    label.TextStrokeTransparency = 0.6
+    label.Visible = true
+
+    if overlay then
+        local ratio = 1
+        if typeof(totalDuration) == "number" and totalDuration > 0 then
+            ratio = math.clamp(remaining / totalDuration, 0, 1)
+        end
+        overlay.Visible = true
+        overlay.Size = UDim2.new(1, 0, ratio, 0)
+    end
+end
+
 function HUDController:Update(state)
     if not self.Elements.WaveLabel then
         return
@@ -532,8 +613,26 @@ function HUDController:Update(state)
     end
     self.Elements.EnemyLabel.Text = string.format("Enemies: %d", enemies)
 
-    if state.Countdown and state.Countdown > 0 then
-        local countdown = math.max(0, state.Countdown)
+    local countdownValue = typeof(state.Countdown) == "number" and state.Countdown or 0
+    local countdownLabel = self.Elements.CountdownLabel
+    local isPreparing = state.State == "Prepare" and countdownValue > 0
+
+    if countdownLabel then
+        countdownLabel.Visible = false
+        countdownLabel.TextTransparency = 1
+        countdownLabel.Text = ""
+    end
+
+    if isPreparing then
+        local displayCountdown = math.max(0, math.floor(countdownValue + 0.5))
+        self.Elements.TimerLabel.Text = string.format("Start in: %ds", displayCountdown)
+        if countdownLabel then
+            countdownLabel.Text = string.format("Wave starts in: %ds", displayCountdown)
+            countdownLabel.Visible = true
+            countdownLabel.TextTransparency = 0
+        end
+    elseif countdownValue and countdownValue > 0 then
+        local countdown = math.max(0, countdownValue)
         local rounded = math.floor((countdown * 10) + 0.5) / 10
         self.Elements.TimerLabel.Text = string.format("Time: %.1fs", rounded)
     elseif state.TimeRemaining and state.TimeRemaining >= 0 then
@@ -560,22 +659,11 @@ function HUDController:UpdateXP(state)
     local xpLabel = self.Elements.XPTextLabel
     local levelLabel = self.Elements.LevelLabel
 
-    if not xpFill or not xpLabel or not levelLabel then
+    if not xpFill or not levelLabel then
         return
     end
 
     local xpConfig = Config.UI and Config.UI.XP or {}
-    local prefix = xpConfig.LabelPrefix or "XP"
-    prefix = string.gsub(prefix, "^%s+", "")
-    prefix = string.gsub(prefix, "%s+$", "")
-
-    local joiner = xpConfig.LabelJoiner
-    if joiner == nil then
-        joiner = ""
-    else
-        joiner = tostring(joiner)
-    end
-
     local levelJoiner = xpConfig.LevelJoiner
     if levelJoiner == nil then
         levelJoiner = ""
@@ -583,9 +671,31 @@ function HUDController:UpdateXP(state)
         levelJoiner = tostring(levelJoiner)
     end
 
+    local prefix = nil
+    local joiner = nil
     local function composeXPText(valueText: string): string
+        if not xpLabel then
+            return valueText
+        end
+
+        if prefix == nil then
+            prefix = xpConfig.LabelPrefix or "XP"
+            prefix = string.gsub(prefix, "^%s+", "")
+            prefix = string.gsub(prefix, "%s+$", "")
+        end
+
+        if joiner == nil then
+            local joinValue = xpConfig.LabelJoiner
+            if joinValue == nil then
+                joinValue = ""
+            else
+                joinValue = tostring(joinValue)
+            end
+            joiner = joinValue
+        end
+
         if prefix ~= "" then
-            return prefix .. joiner .. valueText
+            return prefix .. (joiner or "") .. valueText
         end
         return valueText
     end
@@ -639,20 +749,23 @@ function HUDController:UpdateXP(state)
 
     xpFill.Size = UDim2.new(math.clamp(ratio, 0, 1), 0, 1, 0)
 
-    if required > 0 then
-        xpLabel.Text = composeXPText(string.format("%d/%d", math.floor(current + 0.5), math.floor(required + 0.5)))
-    elseif ratio > 0 then
-        xpLabel.Text = composeXPText(string.format("%d%%", math.floor(ratio * 100 + 0.5)))
-    elseif typeof(totalXP) == "number" then
-        xpLabel.Text = composeXPText(string.format("%d", math.floor(totalXP + 0.5)))
-    else
-        xpLabel.Text = composeXPText("0")
+    if xpLabel then
+        if required > 0 then
+            xpLabel.Text = composeXPText(string.format("%d/%d", math.floor(current + 0.5), math.floor(required + 0.5)))
+        elseif ratio > 0 then
+            xpLabel.Text = composeXPText(string.format("%d%%", math.floor(ratio * 100 + 0.5)))
+        elseif typeof(totalXP) == "number" then
+            xpLabel.Text = composeXPText(string.format("%d", math.floor(totalXP + 0.5)))
+        else
+            xpLabel.Text = composeXPText("0")
+        end
     end
 end
 
 function HUDController:UpdateSkillCooldowns(skillTable)
     local cooldownLabel = self.Elements.SkillCooldownLabel
     local keyLabel = self.Elements.SkillKeyLabel
+    local overlay = self.Elements.SkillCooldownOverlay
     if not cooldownLabel then
         return
     end
@@ -695,6 +808,8 @@ function HUDController:UpdateSkillCooldowns(skillTable)
     if info and typeof(info) == "table" then
         if typeof(info.Cooldown) == "number" then
             cooldown = math.max(0, info.Cooldown)
+        elseif typeof(info.Duration) == "number" then
+            cooldown = math.max(0, info.Duration)
         end
 
         if typeof(info.ReadyTime) == "number" then
@@ -714,29 +829,25 @@ function HUDController:UpdateSkillCooldowns(skillTable)
         end
     end
 
-    if remaining > 0.05 then
-        local displayValue = math.floor((remaining * 10) + 0.5) / 10
-        cooldownLabel.Text = string.format("%.1f", displayValue)
-        cooldownLabel.TextColor3 = Color3.new(1, 1, 1)
-        cooldownLabel.TextStrokeTransparency = 0.6
-        cooldownLabel.Visible = true
-    else
-        cooldownLabel.Text = readyText
-        cooldownLabel.TextColor3 = readyColor
-        cooldownLabel.TextStrokeTransparency = 0.6
-        cooldownLabel.Visible = true
-    end
+    applyCooldownVisual(cooldownLabel, overlay, readyText, readyColor, remaining, cooldown)
 end
 
 function HUDController:UpdateDashCooldown(dashData)
     local dashCooldownLabel = self.Elements.DashCooldownLabel
+    local overlay = self.Elements.DashCooldownOverlay
     if not dashCooldownLabel then
         return
     end
 
     local remaining = 0
+    local cooldown = 0
 
     if typeof(dashData) == "table" then
+        if typeof(dashData.Cooldown) == "number" then
+            cooldown = math.max(0, dashData.Cooldown)
+        elseif typeof(dashData.Duration) == "number" then
+            cooldown = math.max(0, dashData.Duration)
+        end
         if typeof(dashData.ReadyTime) == "number" then
             local now = Workspace:GetServerTimeNow()
             remaining = math.max(0, dashData.ReadyTime - now)
@@ -748,18 +859,7 @@ function HUDController:UpdateDashCooldown(dashData)
     local readyText = self.DashReadyText or "Ready"
     local readyColor = self.DashReadyColor or Color3.fromRGB(180, 255, 205)
 
-    if remaining <= 0.05 then
-        dashCooldownLabel.Text = readyText
-        dashCooldownLabel.TextColor3 = readyColor
-        dashCooldownLabel.TextStrokeTransparency = 0.6
-        dashCooldownLabel.Visible = true
-    else
-        local displayValue = math.floor((remaining * 10) + 0.5) / 10
-        dashCooldownLabel.Text = string.format("%.1f", displayValue)
-        dashCooldownLabel.TextColor3 = Color3.new(1, 1, 1)
-        dashCooldownLabel.TextStrokeTransparency = 0.6
-        dashCooldownLabel.Visible = true
-    end
+    applyCooldownVisual(dashCooldownLabel, overlay, readyText, readyColor, remaining, cooldown)
 end
 
 function HUDController:ShowMessage(text: string)

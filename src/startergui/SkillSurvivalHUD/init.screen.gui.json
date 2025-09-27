@@ -216,24 +216,8 @@
                         "TextStrokeTransparency": 0.6,
                         "TextXAlignment": "Left",
                         "TextYAlignment": "Center",
-                        "Size": { "UDim2": [0, 80, 1, 0] },
+                        "Size": { "UDim2": [1, 0, 1, 0] },
                         "LayoutOrder": 1
-                      }
-                    },
-                    "XPText": {
-                      "$className": "TextLabel",
-                      "$properties": {
-                        "Name": "XPText",
-                        "BackgroundTransparency": 1,
-                        "Font": "Gotham",
-                        "Text": "XP0",
-                        "TextSize": 18,
-                        "TextColor3": { "Color3": [1, 1, 1] },
-                        "TextStrokeTransparency": 0.6,
-                        "TextXAlignment": "Left",
-                        "TextYAlignment": "Center",
-                        "Size": { "UDim2": [1, -88, 1, 0] },
-                        "LayoutOrder": 2
                       }
                     }
                   }
@@ -296,6 +280,23 @@
                 "HorizontalAlignment": "Center",
                 "VerticalAlignment": "Top",
                 "Padding": { "UDim": [0, 8] }
+              }
+            },
+            "CountdownLabel": {
+              "$className": "TextLabel",
+              "$properties": {
+                "Name": "CountdownLabel",
+                "BackgroundTransparency": 1,
+                "Font": "GothamBold",
+                "Text": "",
+                "TextSize": 20,
+                "TextColor3": { "Color3": [1, 1, 1] },
+                "TextStrokeTransparency": 0.6,
+                "TextXAlignment": "Center",
+                "TextYAlignment": "Center",
+                "TextTransparency": 1,
+                "Size": { "UDim2": [1, 0, 0, 40] },
+                "LayoutOrder": 0
               }
             },
             "WaveAnnouncement": {
@@ -403,11 +404,23 @@
                       "$properties": {
                         "Name": "Gauge",
                         "BackgroundColor3": { "Color3": [0.070588, 0.094117, 0.12549] },
-                        "BackgroundTransparency": 0.25,
+                        "BackgroundTransparency": 0.2,
                         "BorderSizePixel": 0,
+                        "ClipsDescendants": true,
                         "Size": { "UDim2": [1, 0, 1, 0] }
                       },
                       "$children": {
+                        "CooldownOverlay": {
+                          "$className": "Frame",
+                          "$properties": {
+                            "Name": "CooldownOverlay",
+                            "BackgroundColor3": { "Color3": [0, 0, 0] },
+                            "BackgroundTransparency": 0.35,
+                            "BorderSizePixel": 0,
+                            "Size": { "UDim2": [1, 0, 0, 0] },
+                            "ZIndex": 1
+                          }
+                        },
                         "UICorner": {
                           "$className": "UICorner",
                           "$properties": {
@@ -434,6 +447,7 @@
                             "TextScaled": true,
                             "TextXAlignment": "Center",
                             "TextYAlignment": "Center",
+                            "ZIndex": 2,
                             "AnchorPoint": { "Vector2": [0.5, 0.5] },
                             "Position": { "UDim2": [0.5, 0, 0.32, 0] }
                           }
@@ -449,8 +463,10 @@
                             "TextScaled": true,
                             "TextXAlignment": "Center",
                             "TextYAlignment": "Center",
-                            "AnchorPoint": { "Vector2": [0.5, 0.5] },
-                            "Position": { "UDim2": [0.5, 0, 0.72, 0] }
+                            "AnchorPoint": { "Vector2": [0.5, 1] },
+                            "Position": { "UDim2": [0.5, 0, 0, -4] },
+                            "Size": { "UDim2": [0.9, 0, 0, 26] },
+                            "ZIndex": 3
                           }
                         }
                       }
@@ -481,11 +497,23 @@
                       "$properties": {
                         "Name": "Gauge",
                         "BackgroundColor3": { "Color3": [0.070588, 0.094117, 0.12549] },
-                        "BackgroundTransparency": 0.25,
+                        "BackgroundTransparency": 0.2,
                         "BorderSizePixel": 0,
+                        "ClipsDescendants": true,
                         "Size": { "UDim2": [1, 0, 1, 0] }
                       },
                       "$children": {
+                        "CooldownOverlay": {
+                          "$className": "Frame",
+                          "$properties": {
+                            "Name": "CooldownOverlay",
+                            "BackgroundColor3": { "Color3": [0, 0, 0] },
+                            "BackgroundTransparency": 0.35,
+                            "BorderSizePixel": 0,
+                            "Size": { "UDim2": [1, 0, 0, 0] },
+                            "ZIndex": 1
+                          }
+                        },
                         "UICorner": {
                           "$className": "UICorner",
                           "$properties": {
@@ -512,6 +540,7 @@
                             "TextScaled": true,
                             "TextXAlignment": "Center",
                             "TextYAlignment": "Center",
+                            "ZIndex": 2,
                             "AnchorPoint": { "Vector2": [0.5, 0.5] },
                             "Position": { "UDim2": [0.5, 0, 0.32, 0] }
                           }
@@ -527,8 +556,10 @@
                             "TextScaled": true,
                             "TextXAlignment": "Center",
                             "TextYAlignment": "Center",
-                            "AnchorPoint": { "Vector2": [0.5, 0.5] },
-                            "Position": { "UDim2": [0.5, 0, 0.72, 0] }
+                            "AnchorPoint": { "Vector2": [0.5, 1] },
+                            "Position": { "UDim2": [0.5, 0, 0, -4] },
+                            "Size": { "UDim2": [0.9, 0, 0, 26] },
+                            "ZIndex": 3
                           }
                         }
                       }
