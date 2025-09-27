@@ -569,7 +569,6 @@ local function applyCooldownVisual(
         or cooldownText == "0.0"
         or cooldownText == "0"
         or cooldownText == "-0.0" then
-    if cooldownText == "0.0" or cooldownText == "0" or cooldownText == "-0.0" then
         label.Text = readyText
         label.TextColor3 = readyColor
     else
