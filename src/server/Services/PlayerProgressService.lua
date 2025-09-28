@@ -14,36 +14,36 @@ local PlayerProgressService = Knit.CreateService({
 local DEFAULT_CHOICES = {
     {
         id = "atk_+10",
-        name = "Power Module",
-        desc = "+10% Attack",
+        name = "파워 모듈",
+        desc = "공격력 +10%",
         kind = "stat",
         value = 0.10,
     },
     {
         id = "hp_+15",
-        name = "Vital Core",
-        desc = "+15% Max HP",
+        name = "생명 핵",
+        desc = "최대 체력 +15%",
         kind = "stat",
         value = 0.15,
     },
     {
         id = "dash+1",
-        name = "Swift Step",
-        desc = "+1 Dash Charge",
+        name = "신속한 발걸음",
+        desc = "대시 충전 +1",
         kind = "perk",
         value = 1,
     },
     {
         id = "ult_cd-10",
-        name = "Focus Coil",
-        desc = "-10% Ultimate Cooldown",
+        name = "집중 코일",
+        desc = "궁극기 재사용 대기시간 -10%",
         kind = "perk",
         value = 0.10,
     },
     {
         id = "resurge",
-        name = "Resurge",
-        desc = "Heal 35% HP instantly",
+        name = "재생 회로",
+        desc = "즉시 체력 35% 회복",
         kind = "instant",
         value = 0.35,
     },
@@ -64,6 +64,7 @@ function PlayerProgressService:KnitInit()
             committed: boolean,
             choices: { [number]: { id: string, name: string, desc: string, kind: string, value: any } }?,
         }?,
+        connections: { [string]: RBXScriptConnection }?,
     }}
     self.ActiveFreezes = 0
     self.WorldFrozen = false
@@ -72,9 +73,21 @@ function PlayerProgressService:KnitInit()
     self.WorldFreezeChanged = Knit.Util.Signal.new()
     self.Random = Random.new()
     self.LevelingConfig = Config.Leveling or {}
+    self.EnemyService = nil
+    self.FrozenPlayerHumanoids = {} :: {[Humanoid]: {WalkSpeed: number, AutoRotate: boolean, JumpValue: number, UseJumpPower: boolean}}
+    self.FrozenPlayerRoots = {} :: {[BasePart]: {Anchored: boolean}}
 end
 
 function PlayerProgressService:KnitStart()
+    task.defer(function()
+        local success, service = pcall(function()
+            return Knit.GetService("EnemyService")
+        end)
+        if success then
+            self.EnemyService = service
+        end
+    end)
+
     Players.PlayerAdded:Connect(function(player)
         self:CreateProfile(player)
     end)
@@ -122,8 +135,8 @@ function PlayerProgressService:ComputeXPToNext(level: number): number
             return math.max(0, math.floor(value))
         end
     end
-    local baseXP = (leveling and leveling.BaseXP) or 100
-    local growth = (leveling and leveling.Growth) or 1.25
+    local baseXP = (leveling and leveling.BaseXP) or 60
+    local growth = (leveling and leveling.Growth) or 1.2
     return math.max(0, math.floor(baseXP * (growth ^ (math.max(1, math.floor(level)) - 1))))
 end
 
@@ -140,9 +153,27 @@ function PlayerProgressService:CreateProfile(player: Player)
         isFrozen = false,
         queue = {},
         activeLevelUp = nil,
+        connections = {},
     }
 
     self.Profiles[player] = profile
+
+    local connections = profile.connections
+    connections.CharacterAdded = player.CharacterAdded:Connect(function(character)
+        if self.WorldFrozen then
+            task.defer(function()
+                self:_setCharacterFrozen(character, true)
+            end)
+        end
+    end)
+
+    local character = player.Character
+    if character and self.WorldFrozen then
+        task.defer(function()
+            self:_setCharacterFrozen(character, true)
+        end)
+    end
+
     return profile
 end
 
@@ -150,6 +181,15 @@ function PlayerProgressService:RemoveProfile(player: Player)
     local profile = self.Profiles[player]
     if not profile then
         return
+    end
+
+    if profile.connections then
+        for _, connection in pairs(profile.connections) do
+            if connection and connection.Disconnect then
+                connection:Disconnect()
+            end
+        end
+        profile.connections = nil
     end
 
     if profile.isFrozen then
@@ -174,6 +214,11 @@ function PlayerProgressService:SetWorldFreeze(enabled: boolean)
             self.WorldFrozen = true
             self.WorldFreezeStartedAt = time()
             Net:FireAll("SetWorldFreeze", true)
+            self:_setAllPlayerCharactersFrozen(true)
+            local enemyService = self.EnemyService
+            if enemyService and typeof(enemyService.SetWorldFreeze) == "function" then
+                enemyService:SetWorldFreeze(true)
+            end
             if self.WorldFreezeChanged then
                 self.WorldFreezeChanged:Fire(true, 0)
             end
@@ -188,9 +233,103 @@ function PlayerProgressService:SetWorldFreeze(enabled: boolean)
             self.WorldFrozen = false
             self.WorldFreezeStartedAt = nil
             Net:FireAll("SetWorldFreeze", false)
+            self:_setAllPlayerCharactersFrozen(false)
+            local enemyService = self.EnemyService
+            if enemyService and typeof(enemyService.SetWorldFreeze) == "function" then
+                enemyService:SetWorldFreeze(false)
+            end
             if self.WorldFreezeChanged then
                 self.WorldFreezeChanged:Fire(false, duration)
             end
+        end
+    end
+end
+
+function PlayerProgressService:_setCharacterFrozen(character: Model?, enabled: boolean)
+    if not character then
+        return
+    end
+
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    local root = character:FindFirstChild("HumanoidRootPart")
+        or (character:IsA("Model") and character.PrimaryPart)
+
+    if humanoid then
+        local record = self.FrozenPlayerHumanoids[humanoid]
+        if enabled then
+            if not record then
+                record = {
+                    WalkSpeed = humanoid.WalkSpeed,
+                    AutoRotate = humanoid.AutoRotate,
+                    UseJumpPower = humanoid.UseJumpPower,
+                    JumpValue = humanoid.UseJumpPower and humanoid.JumpPower or humanoid.JumpHeight,
+                }
+                self.FrozenPlayerHumanoids[humanoid] = record
+                humanoid.WalkSpeed = 0
+                if humanoid.UseJumpPower then
+                    humanoid.JumpPower = 0
+                else
+                    humanoid.JumpHeight = 0
+                end
+                humanoid.AutoRotate = false
+                humanoid:ChangeState(Enum.HumanoidStateType.Physics)
+            end
+        else
+            if record then
+                humanoid.WalkSpeed = record.WalkSpeed
+                if humanoid.UseJumpPower then
+                    humanoid.JumpPower = record.JumpValue
+                else
+                    humanoid.JumpHeight = record.JumpValue
+                end
+                humanoid.AutoRotate = record.AutoRotate
+                self.FrozenPlayerHumanoids[humanoid] = nil
+            end
+        end
+    end
+
+    if root and root:IsA("BasePart") then
+        local rootRecord = self.FrozenPlayerRoots[root]
+        if enabled then
+            if not rootRecord then
+                self.FrozenPlayerRoots[root] = {Anchored = root.Anchored}
+                root.Anchored = true
+                root.AssemblyLinearVelocity = Vector3.zero
+                root.AssemblyAngularVelocity = Vector3.zero
+            end
+        else
+            if rootRecord then
+                root.Anchored = rootRecord.Anchored
+                self.FrozenPlayerRoots[root] = nil
+            end
+        end
+    end
+end
+
+function PlayerProgressService:_setAllPlayerCharactersFrozen(enabled: boolean)
+    for _, player in ipairs(Players:GetPlayers()) do
+        self:_setCharacterFrozen(player.Character, enabled)
+    end
+
+    if not enabled then
+        for humanoid, record in pairs(self.FrozenPlayerHumanoids) do
+            if humanoid and humanoid.Parent then
+                humanoid.WalkSpeed = record.WalkSpeed
+                if humanoid.UseJumpPower then
+                    humanoid.JumpPower = record.JumpValue
+                else
+                    humanoid.JumpHeight = record.JumpValue
+                end
+                humanoid.AutoRotate = record.AutoRotate
+            end
+            self.FrozenPlayerHumanoids[humanoid] = nil
+        end
+
+        for root, record in pairs(self.FrozenPlayerRoots) do
+            if root and root.Parent then
+                root.Anchored = record.Anchored
+            end
+            self.FrozenPlayerRoots[root] = nil
         end
     end
 end
