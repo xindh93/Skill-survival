@@ -490,11 +490,21 @@ function HUDController:CaptureInterfaceElements(screen: ScreenGui, abilityConfig
         CountdownLabel = countdownLabel,
         ReservedAlert = reservedAlert,
         ReservedAlertLabel = reservedLabel,
+        AlertArea = alertArea,
         XPFill = xpFill,
         XPTextLabel = xpLabel,
         LevelLabel = levelLabel,
         XPBar = xpBar,
     }
+
+    if alertArea and not self._alertAreaLastState then
+        self.AlertAreaDefault = {
+            AnchorPoint = alertArea.AnchorPoint,
+            Position = alertArea.Position,
+        }
+    elseif not alertArea then
+        self.AlertAreaDefault = nil
+    end
 
     if self.InterfaceSignal then
         self.InterfaceSignal:Fire(screen)
@@ -605,11 +615,17 @@ function HUDController:Update(state)
     self.Elements.EnemyLabel.Text = string.format("Enemies: %d", enemies)
 
     local countdownLabel = self.Elements.CountdownLabel
+    local alertArea = self.Elements.AlertArea
+    local waveAnnouncement = self.Elements.WaveAnnouncement
+    local messageLabel = self.Elements.MessageLabel
+    local reservedAlert = self.Elements.ReservedAlert
     local stateName = state.State
     local countdownValue = tonumber(state.Countdown)
+    local showPrepareCountdown = false
 
     if countdownLabel then
         if stateName == "Prepare" and countdownValue and countdownValue > 0 then
+            showPrepareCountdown = true
             countdownLabel.Visible = true
             countdownLabel.TextTransparency = 0
             countdownLabel.Text = string.format("START IN : %ds", math.ceil(countdownValue))
@@ -617,6 +633,50 @@ function HUDController:Update(state)
             countdownLabel.Visible = false
             countdownLabel.TextTransparency = 1
             countdownLabel.Text = ""
+        end
+    end
+
+    if alertArea then
+        if showPrepareCountdown then
+            if not self._alertAreaLastState then
+                self._alertAreaLastState = {
+                    AnchorPoint = alertArea.AnchorPoint,
+                    Position = alertArea.Position,
+                    WaveVisible = waveAnnouncement and waveAnnouncement.Visible or nil,
+                    MessageVisible = messageLabel and messageLabel.Visible or nil,
+                    ReservedVisible = reservedAlert and reservedAlert.Visible or nil,
+                }
+            end
+            alertArea.AnchorPoint = Vector2.new(0.5, 0.5)
+            alertArea.Position = UDim2.new(0.5, 0, 0.44, 0)
+            if waveAnnouncement then
+                waveAnnouncement.Visible = false
+            end
+            if messageLabel then
+                messageLabel.Visible = false
+            end
+            if reservedAlert then
+                reservedAlert.Visible = false
+            end
+        elseif self._alertAreaLastState then
+            local defaults = self.AlertAreaDefault
+            if defaults then
+                alertArea.AnchorPoint = defaults.AnchorPoint or alertArea.AnchorPoint
+                alertArea.Position = defaults.Position or alertArea.Position
+            else
+                alertArea.AnchorPoint = self._alertAreaLastState.AnchorPoint or alertArea.AnchorPoint
+                alertArea.Position = self._alertAreaLastState.Position or alertArea.Position
+            end
+            if waveAnnouncement and self._alertAreaLastState.WaveVisible ~= nil then
+                waveAnnouncement.Visible = self._alertAreaLastState.WaveVisible
+            end
+            if messageLabel and self._alertAreaLastState.MessageVisible ~= nil then
+                messageLabel.Visible = self._alertAreaLastState.MessageVisible
+            end
+            if reservedAlert and self._alertAreaLastState.ReservedVisible ~= nil then
+                reservedAlert.Visible = self._alertAreaLastState.ReservedVisible
+            end
+            self._alertAreaLastState = nil
         end
     end
 
