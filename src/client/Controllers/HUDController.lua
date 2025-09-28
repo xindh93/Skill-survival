@@ -649,6 +649,7 @@ function HUDController:Update(state)
             end
             alertArea.AnchorPoint = Vector2.new(0.5, 0.5)
             alertArea.Position = UDim2.new(0.5, 0, 0.44, 0)
+            alertArea.Position = UDim2.new(0.5, 0, 0.5, 0)
             if waveAnnouncement then
                 waveAnnouncement.Visible = false
             end

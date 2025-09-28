@@ -312,6 +312,13 @@
                 "TextYAlignment": "Center",
                 "TextTransparency": 1,
                 "Size": { "UDim2": [1, 0, 0, 128] },
+                "TextSize": 64,
+                "TextColor3": { "Color3": [1, 1, 1] },
+                "TextStrokeTransparency": 0.25,
+                "TextXAlignment": "Center",
+                "TextYAlignment": "Center",
+                "TextTransparency": 1,
+                "Size": { "UDim2": [1, 0, 0, 96] },
                 "LayoutOrder": 0
               }
             },
