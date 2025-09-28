@@ -605,11 +605,19 @@ function HUDController:Update(state)
     self.Elements.EnemyLabel.Text = string.format("Enemies: %d", enemies)
 
     local countdownLabel = self.Elements.CountdownLabel
+    local stateName = state.State
+    local countdownValue = tonumber(state.Countdown)
 
     if countdownLabel then
-        countdownLabel.Visible = false
-        countdownLabel.TextTransparency = 1
-        countdownLabel.Text = ""
+        if stateName == "Prepare" and countdownValue and countdownValue > 0 then
+            countdownLabel.Visible = true
+            countdownLabel.TextTransparency = 0
+            countdownLabel.Text = string.format("START IN : %ds", math.ceil(countdownValue))
+        else
+            countdownLabel.Visible = false
+            countdownLabel.TextTransparency = 1
+            countdownLabel.Text = ""
+        end
     end
 
     if state.TimeRemaining and state.TimeRemaining >= 0 then

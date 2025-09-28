@@ -63,8 +63,11 @@ function PlayerProgressService:KnitInit()
             token: string,
             committed: boolean,
             choices: { [number]: { id: string, name: string, desc: string, kind: string, value: any } }?,
+            startedAt: number?,
+            expireTime: number?,
         }?,
         connections: { [string]: RBXScriptConnection }?,
+        lastChoice: any?,
     }}
     self.ActiveFreezes = 0
     self.WorldFrozen = false
@@ -73,6 +76,8 @@ function PlayerProgressService:KnitInit()
     self.WorldFreezeChanged = Knit.Util.Signal.new()
     self.Random = Random.new()
     self.LevelingConfig = Config.Leveling or {}
+    local levelingUI = (self.LevelingConfig and self.LevelingConfig.UI) or {}
+    self.LevelUpTimeout = math.max(1, levelingUI.SelectionTimeout or 30)
     self.EnemyService = nil
     self.FrozenPlayerHumanoids = {} :: {[Humanoid]: {WalkSpeed: number, AutoRotate: boolean, JumpValue: number, UseJumpPower: boolean}}
     self.FrozenPlayerRoots = {} :: {[BasePart]: {Anchored: boolean}}
@@ -154,6 +159,7 @@ function PlayerProgressService:CreateProfile(player: Player)
         queue = {},
         activeLevelUp = nil,
         connections = {},
+        lastChoice = nil,
     }
 
     self.Profiles[player] = profile
@@ -202,6 +208,7 @@ function PlayerProgressService:RemoveProfile(player: Player)
     end
 
     self.Profiles[player] = nil
+    self:BroadcastLevelUpStatus()
 end
 
 function PlayerProgressService:IsWorldFrozen(): boolean
@@ -437,7 +444,18 @@ function PlayerProgressService:BeginLevelUpFreeze(player: Player, profile, entry
         token = HttpService:GenerateGUID(false),
         committed = false,
         choices = nil,
+        startedAt = time(),
     }
+
+    local active = profile.activeLevelUp
+    active.choices = self:GenerateChoices(player, profile)
+    active.expireTime = (active.startedAt or time()) + self.LevelUpTimeout
+
+    self:BroadcastLevelUpStatus()
+
+    task.spawn(function()
+        self:AwaitLevelUpTimeout(player, active.token)
+    end)
 
     Net:FireAll("LevelUp", player, entry.level, entry.carriedXP)
 end
@@ -457,6 +475,113 @@ function PlayerProgressService:GenerateChoices(player: Player, profile)
         results[#results + 1] = table.clone(entry)
     end
     return results
+end
+
+function PlayerProgressService:BroadcastLevelUpStatus()
+    local total = 0
+    local committed = 0
+    local minRemaining = nil
+    local now = time()
+
+    for _, profile in pairs(self.Profiles) do
+        local active = profile and profile.activeLevelUp
+        if active then
+            total += 1
+            if active.committed then
+                committed += 1
+            elseif typeof(active.expireTime) == "number" then
+                local remaining = math.max(0, active.expireTime - now)
+                if not minRemaining or remaining < minRemaining then
+                    minRemaining = remaining
+                end
+            end
+        end
+    end
+
+    Net:FireAll("LevelUpStatus", {
+        Total = total,
+        Committed = committed,
+        Remaining = minRemaining,
+    })
+end
+
+function PlayerProgressService:AwaitLevelUpTimeout(player: Player, token: string)
+    while true do
+        task.wait(0.5)
+        local profile = self.Profiles[player]
+        if not profile then
+            return
+        end
+
+        local active = profile.activeLevelUp
+        if not active or active.token ~= token then
+            return
+        end
+
+        if active.committed then
+            return
+        end
+
+        local expireTime = active.expireTime
+        if typeof(expireTime) ~= "number" then
+            expireTime = time() + self.LevelUpTimeout
+            active.expireTime = expireTime
+        end
+
+        if time() >= expireTime then
+            self:AutoCommitLevelUp(player, profile)
+            return
+        end
+    end
+end
+
+function PlayerProgressService:AutoCommitLevelUp(player: Player, profile)
+    profile = profile or self.Profiles[player]
+    if not profile then
+        return
+    end
+
+    local active = profile.activeLevelUp
+    if not active or active.committed then
+        return
+    end
+
+    if not active.choices then
+        active.choices = self:GenerateChoices(player, profile)
+    end
+
+    local fallback = nil
+    if active.choices and #active.choices > 0 then
+        fallback = active.choices[1]
+    end
+
+    if fallback then
+        self:ApplyLevelUpChoice(player, profile, fallback)
+    else
+        active.committed = true
+        self:BroadcastLevelUpStatus()
+        self:CompleteLevelUp(player, profile)
+    end
+end
+
+function PlayerProgressService:ApplyLevelUpChoice(player: Player, profile, chosen)
+    if not profile then
+        profile = self.Profiles[player]
+    end
+
+    if not profile then
+        return
+    end
+
+    local active = profile.activeLevelUp
+    if not active or active.committed then
+        return
+    end
+
+    active.committed = true
+    profile.lastChoice = chosen
+    self:BroadcastLevelUpStatus()
+    self:CompleteLevelUp(player, profile)
 end
 
 function PlayerProgressService:OnGetLevelUpChoices(player: Player)
@@ -509,12 +634,9 @@ function PlayerProgressService:OnCommitLevelUpChoice(player: Player, choiceId: s
         return
     end
 
-    active.committed = true
-    profile.lastChoice = chosen
-
     -- TODO: integrate stat and perk application once systems are available.
 
-    self:CompleteLevelUp(player, profile)
+    self:ApplyLevelUpChoice(player, profile, chosen)
 end
 
 function PlayerProgressService:CompleteLevelUp(player: Player, profile)
@@ -530,6 +652,7 @@ function PlayerProgressService:CompleteLevelUp(player: Player, profile)
     end
 
     self:FireXPChanged(player, profile)
+    self:BroadcastLevelUpStatus()
     self:ProcessQueue(player, profile)
 end
 

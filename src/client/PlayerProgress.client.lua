@@ -234,6 +234,7 @@ local freezeOverlay = levelUpGui:FindFirstChild("FreezeOverlay")
 local rootFrame = levelUpGui:FindFirstChild("Root")
 local confirmBlocker = levelUpGui:FindFirstChild("ConfirmBlocker")
 local optionsFrame = rootFrame and rootFrame:FindFirstChild("Options")
+local statusLabel = rootFrame and rootFrame:FindFirstChild("StatusLabel")
 
 local optionButtons = {}
 if optionsFrame then
@@ -261,6 +262,51 @@ local choiceSubmitted = false
 local activeChoices = nil
 local overlayTween: Tween? = nil
 local freezeBlockBound = false
+local statusState = {
+    total = 0,
+    committed = 0,
+    remaining = 0,
+    lastText = nil,
+}
+
+local function refreshStatusLabel(force)
+    if not statusLabel then
+        return
+    end
+
+    if not modalActive or statusState.total <= 0 then
+        if statusLabel.Visible then
+            statusLabel.Visible = false
+        end
+        statusState.lastText = nil
+        return
+    end
+
+    local total = math.max(0, math.floor(statusState.total + 0.5))
+    if total <= 0 then
+        if statusLabel.Visible then
+            statusLabel.Visible = false
+        end
+        statusState.lastText = nil
+        return
+    end
+
+    local committed = math.max(0, math.floor(statusState.committed + 0.5))
+    committed = math.clamp(committed, 0, total)
+    local ratioText = string.format("%d/%d", committed, total)
+    local text = "Ready: " .. ratioText
+    local remaining = statusState.remaining or 0
+    if remaining > 0 then
+        text = string.format("Ready: %s (%ds)", ratioText, math.ceil(remaining))
+    end
+
+    if force or text ~= statusState.lastText then
+        statusLabel.Text = text
+        statusState.lastText = text
+    end
+
+    statusLabel.Visible = true
+end
 
 
 local function pushHUDUpdate()
@@ -362,6 +408,7 @@ local function resetChoices()
     activeChoices = nil
     choiceSubmitted = false
     if not optionsFrame then
+        refreshStatusLabel(true)
         return
     end
 
@@ -387,6 +434,8 @@ local function resetChoices()
             descLabel.Text = ""
         end
     end
+
+    refreshStatusLabel(true)
 end
 
 local function populateChoices(choices)
@@ -538,6 +587,7 @@ local progressFunction = Net:GetFunction("GetProgress")
 local xpChangedEvent = Net:GetEvent("XPChanged")
 local levelUpEvent = Net:GetEvent("LevelUp")
 local freezeEvent = Net:GetEvent("SetWorldFreeze")
+local levelUpStatusEvent = Net:GetEvent("LevelUpStatus")
 
 local success, initial = pcall(function()
     return progressFunction:InvokeServer()
@@ -562,6 +612,26 @@ xpChangedEvent.OnClientEvent:Connect(function(player, xp, xpToNext)
     pushHUDUpdate()
 end)
 
+levelUpStatusEvent.OnClientEvent:Connect(function(payload)
+    if typeof(payload) ~= "table" then
+        return
+    end
+
+    statusState.total = math.max(0, tonumber(payload.Total) or 0)
+    statusState.committed = math.max(0, tonumber(payload.Committed) or 0)
+    if statusState.total > 0 and typeof(payload.Remaining) == "number" then
+        statusState.remaining = math.max(0, payload.Remaining)
+    else
+        statusState.remaining = 0
+    end
+
+    if not modalActive then
+        statusState.lastText = nil
+    end
+
+    refreshStatusLabel(true)
+end)
+
 levelUpEvent.OnClientEvent:Connect(function(player, newLevel, carriedXP)
     if player ~= LOCAL_PLAYER then
         return
@@ -577,6 +647,7 @@ levelUpEvent.OnClientEvent:Connect(function(player, newLevel, carriedXP)
     resetChoices()
     task.spawn(requestChoices)
     playLevelUpAnimation(newLevel, carriedXP)
+    refreshStatusLabel(true)
 end)
 
 freezeEvent.OnClientEvent:Connect(function(enabled)
@@ -592,6 +663,7 @@ freezeEvent.OnClientEvent:Connect(function(enabled)
             rootFrame.Visible = false
         end
         resetChoices()
+        refreshStatusLabel(true)
     end
 end)
 
@@ -603,5 +675,14 @@ RunService.RenderStepped:Connect(function(dt)
     else
         xpState.currentRatio = xpState.targetRatio
     end
+
+    if statusLabel and statusLabel.Visible and statusState.remaining and statusState.remaining > 0 then
+        local previous = statusState.remaining
+        statusState.remaining = math.max(0, previous - dt)
+        if math.ceil(statusState.remaining) ~= math.ceil(previous) then
+            refreshStatusLabel(false)
+        end
+    end
+
     pushHUDUpdate()
 end)

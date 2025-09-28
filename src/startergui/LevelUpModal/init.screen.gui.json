@@ -74,7 +74,8 @@
             "TextColor3": { "Color3": [1, 1, 1] },
             "TextStrokeTransparency": 0.6,
             "Size": { "UDim2": [1, -48, 0, 48] },
-            "ZIndex": 3
+            "ZIndex": 3,
+            "LayoutOrder": 1
           }
         },
         "Options": {
@@ -83,7 +84,8 @@
             "Name": "Options",
             "BackgroundTransparency": 1,
             "Size": { "UDim2": [1, 0, 0, 220] },
-            "ZIndex": 3
+            "ZIndex": 3,
+            "LayoutOrder": 2
           },
           "$children": {
             "UIListLayout": {
@@ -197,6 +199,24 @@
                 "Name": "Option3"
               }
             }
+          }
+        },
+        "StatusLabel": {
+          "$className": "TextLabel",
+          "$properties": {
+            "Name": "StatusLabel",
+            "BackgroundTransparency": 1,
+            "Font": "GothamBold",
+            "Text": "",
+            "TextSize": 20,
+            "TextColor3": { "Color3": [1, 1, 1] },
+            "TextStrokeTransparency": 0.6,
+            "TextXAlignment": "Center",
+            "TextYAlignment": "Center",
+            "Visible": false,
+            "Size": { "UDim2": [1, -48, 0, 28] },
+            "ZIndex": 3,
+            "LayoutOrder": 3
           }
         }
       }
