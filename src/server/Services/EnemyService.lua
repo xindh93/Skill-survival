@@ -133,6 +133,7 @@ function EnemyService:KnitStart()
     self.RewardService = Knit.GetService("RewardService")
     self.MapService = Knit.GetService("MapService")
     self.CombatService = Knit.GetService("CombatService")
+    self.PlayerProgressService = Knit.GetService("PlayerProgressService")
 
     self.EnemyFolder = Workspace:FindFirstChild("Enemies")
     if not self.EnemyFolder then
@@ -197,6 +198,11 @@ end
 
 function EnemyService:OnHeartbeat()
     if not self.MatchActive then
+        return
+    end
+
+    if self.PlayerProgressService and self.PlayerProgressService:IsWorldFrozen() then
+        -- TODO: Pause other enemy subsystems (AI steering, projectiles) during world freeze.
         return
     end
 
@@ -767,6 +773,12 @@ function EnemyService:OnEnemyDied(enemyData)
         self.RewardService:RecordKill(killer)
         self.RewardService:AddGold(killer, enemyData.Stats.RewardGold)
         self.RewardService:AddXP(killer, Config.Rewards.KillXP)
+        local leveling = Config.Leveling
+        local xpConfig = leveling and leveling.XP
+        local killXP = xpConfig and xpConfig.Kill or Config.Rewards.KillXP
+        if self.PlayerProgressService then
+            self.PlayerProgressService:AddXP(killer, killXP, "Kill")
+        end
     end
 
     model:Destroy()
