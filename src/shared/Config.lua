@@ -59,8 +59,8 @@ Config.Rewards = {
 Config.Leveling = Config.Leveling or {}
 
 local leveling = Config.Leveling
-leveling.BaseXP = leveling.BaseXP or 100
-leveling.Growth = leveling.Growth or 1.25
+leveling.BaseXP = leveling.BaseXP or 60
+leveling.Growth = leveling.Growth or 1.2
 leveling.MaxLevel = leveling.MaxLevel or 50
 leveling.XP = leveling.XP or {
     Kill = 12,
