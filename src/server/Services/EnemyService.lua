@@ -54,6 +54,7 @@ function EnemyService:KnitInit()
         Enemy = ENEMY_COLLISION_GROUP,
     }
     self.MatchStartTime = 0
+    self.MatchStartWorldTime = 0
     self.LastSpawnTime = 0
     self.NextPulseTime = 0
     self.SurgeActiveUntil = nil
@@ -133,6 +134,7 @@ function EnemyService:KnitStart()
     self.RewardService = Knit.GetService("RewardService")
     self.MapService = Knit.GetService("MapService")
     self.CombatService = Knit.GetService("CombatService")
+    self.PlayerProgressService = Knit.GetService("PlayerProgressService")
 
     self.EnemyFolder = Workspace:FindFirstChild("Enemies")
     if not self.EnemyFolder then
@@ -147,13 +149,26 @@ function EnemyService:StartMatch(startTime: number?)
     self.ActiveEnemies = 0
     self.Enemies = {}
     self.TouchCooldowns = {}
-    self.MatchStartTime = startTime or time()
+    local serverNow = time()
+    self.MatchStartTime = startTime or serverNow
+    local worldNow = self:GetWorldTime()
+    if typeof(self.MatchStartTime) == "number" then
+        local delta = serverNow - self.MatchStartTime
+        self.MatchStartWorldTime = worldNow - delta
+    else
+        self.MatchStartWorldTime = worldNow
+    end
     local spawnInterval = Config.Enemy.SpawnInterval or 0
     if spawnInterval < 0 then
         spawnInterval = 0
     end
-    self.LastSpawnTime = self.MatchStartTime - spawnInterval
-    self.NextPulseTime = self.MatchStartTime + (Config.Session.PulseInterval or 0)
+    self.LastSpawnTime = self.MatchStartWorldTime - spawnInterval
+    local pulseInterval = Config.Session.PulseInterval or 0
+    if pulseInterval > 0 then
+        self.NextPulseTime = self.MatchStartWorldTime + pulseInterval
+    else
+        self.NextPulseTime = 0
+    end
     self.SurgeActiveUntil = nil
     self.LastSurgeStart = nil
     self.SurgeActive = false
@@ -175,6 +190,7 @@ end
 
 function EnemyService:StopAll()
     self.MatchActive = false
+    self.MatchStartWorldTime = 0
     if self.SpawnLoopConnection then
         self.SpawnLoopConnection:Disconnect()
         self.SpawnLoopConnection = nil
@@ -200,13 +216,18 @@ function EnemyService:OnHeartbeat()
         return
     end
 
-    local startTime = self.MatchStartTime or time()
-    local now = time()
-    local elapsed = math.max(0, now - startTime)
+    if self.PlayerProgressService and self.PlayerProgressService:IsWorldFrozen() then
+        -- TODO: Pause other enemy subsystems (AI steering, projectiles) during world freeze.
+        return
+    end
+
+    local worldNow = self:GetWorldTime()
+    local matchStart = self.MatchStartWorldTime or worldNow
+    local elapsed = math.max(0, worldNow - matchStart)
 
     self:ProcessSurge(elapsed)
-    self:ProcessPulses(elapsed, now)
-    self:ProcessContinuousSpawns(elapsed, now)
+    self:ProcessPulses(elapsed, worldNow)
+    self:ProcessContinuousSpawns(elapsed, worldNow)
 end
 
 function EnemyService:ProcessSurge(elapsed: number)
@@ -243,17 +264,17 @@ function EnemyService:ProcessSurge(elapsed: number)
     end
 end
 
-function EnemyService:ProcessPulses(elapsed: number, now: number)
+function EnemyService:ProcessPulses(elapsed: number, worldNow: number)
     local interval = Config.Session.PulseInterval or 0
     if interval <= 0 then
         return
     end
 
     if self.NextPulseTime <= 0 then
-        self.NextPulseTime = (self.MatchStartTime or now) + interval
+        self.NextPulseTime = (self.MatchStartWorldTime or worldNow) + interval
     end
 
-    while now >= self.NextPulseTime do
+    while worldNow >= self.NextPulseTime do
         print(string.format("[EnemyService] Rush pulse @t=%.2f", elapsed))
         Net:FireAll("RushWarning", "pulse")
         self:SpawnEnemies(Config.Enemy.PulseBonus or 0, elapsed, "pulse")
@@ -261,7 +282,7 @@ function EnemyService:ProcessPulses(elapsed: number, now: number)
     end
 end
 
-function EnemyService:ProcessContinuousSpawns(elapsed: number, now: number)
+function EnemyService:ProcessContinuousSpawns(elapsed: number, worldNow: number)
     local spawnInterval = Config.Enemy.SpawnInterval or 0
     if spawnInterval <= 0 then
         spawnInterval = 0.1
@@ -274,7 +295,7 @@ function EnemyService:ProcessContinuousSpawns(elapsed: number, now: number)
         end
     end
 
-    while now - self.LastSpawnTime >= spawnInterval do
+    while worldNow - self.LastSpawnTime >= spawnInterval do
         if not self:SpawnEnemies(1, elapsed, "continuous") then
             break
         end
@@ -332,6 +353,19 @@ function EnemyService:ResolvePortalPart(instance: Instance?): BasePart?
     end
 
     return instance:FindFirstChildWhichIsA("BasePart", true)
+end
+
+function EnemyService:GetWorldTime(): number
+    local service = self.PlayerProgressService
+    if service and typeof(service.GetWorldTime) == "function" then
+        local ok, result = pcall(function()
+            return service:GetWorldTime()
+        end)
+        if ok and typeof(result) == "number" then
+            return result
+        end
+    end
+    return time()
 end
 
 function EnemyService:SelectPortal(portals: {BasePart}): BasePart?
@@ -444,7 +478,7 @@ function EnemyService:AttemptSpawn(portals: {BasePart}, stats, elapsed: number, 
 
         local spawnCFrame, reason, nearest = self:ValidatePortal(portal, spawnConfig)
         if spawnCFrame then
-            self.LastPortalUse[portal] = time()
+            self.LastPortalUse[portal] = self:GetWorldTime()
             self:SpawnEnemy(spawnCFrame, stats)
             self:LogSpawn(portal, "OK", attempt, nearest, stats.IsElite, source)
             return true
@@ -491,7 +525,7 @@ function EnemyService:SpawnEnemies(count: number, elapsed: number, source: strin
 end
 
 function EnemyService:ValidatePortal(portal: BasePart, spawnConfig)
-    local now = time()
+    local now = self:GetWorldTime()
     local cooldown = spawnConfig.PortalCooldown or 0
     local lastUse = self.LastPortalUse[portal]
     if cooldown > 0 and lastUse and (now - lastUse) < cooldown then
@@ -767,6 +801,12 @@ function EnemyService:OnEnemyDied(enemyData)
         self.RewardService:RecordKill(killer)
         self.RewardService:AddGold(killer, enemyData.Stats.RewardGold)
         self.RewardService:AddXP(killer, Config.Rewards.KillXP)
+        local leveling = Config.Leveling
+        local xpConfig = leveling and leveling.XP
+        local killXP = xpConfig and xpConfig.Kill or Config.Rewards.KillXP
+        if self.PlayerProgressService then
+            self.PlayerProgressService:AddXP(killer, killXP, "Kill")
+        end
     end
 
     model:Destroy()

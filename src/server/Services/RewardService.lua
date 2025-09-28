@@ -48,6 +48,10 @@ function RewardService:SetupPlayer(player: Player)
     self:PushStats(player)
 end
 
+function RewardService:KnitStart()
+    self.PlayerProgressService = Knit.GetService("PlayerProgressService")
+end
+
 function RewardService:ResetPlayer(player: Player)
     local stats = self.PlayerStats[player]
     if not stats then
@@ -161,6 +165,9 @@ function RewardService:FinalizeMatch(reason: string)
         stats.XP = stats.XP + Config.Rewards.ResultXPBonus
         self.ResultReasons[player] = reason
         self:PushStats(player)
+        if self.PlayerProgressService then
+            self.PlayerProgressService:AddXP(player, Config.Rewards.ResultXPBonus, "Result")
+        end
         if self.DataStore then
             pcall(function()
                 self.DataStore:SetAsync("player_" .. player.UserId, {

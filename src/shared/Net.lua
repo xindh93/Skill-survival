@@ -37,10 +37,16 @@ Net.Definitions = {
         BossEnraged = "BossEnraged",
         RushWarning = "RushWarning",
         TeammateDown = "TeammateDown",
+        XPChanged = "XPChanged",
+        LevelUp = "LevelUp",
+        CommitLevelUpChoice = "CommitLevelUpChoice",
+        SetWorldFreeze = "SetWorldFreeze",
     },
     Functions = {
         RequestSummary = "RequestSummary",
         RestartMatch = "RestartMatch",
+        GetProgress = "GetProgress",
+        GetLevelUpChoices = "GetLevelUpChoices",
     },
 }
 
