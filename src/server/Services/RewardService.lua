@@ -96,14 +96,40 @@ function RewardService:AddGold(player: Player, amount: number)
     self:PushStats(player)
 end
 
-function RewardService:AddXP(player: Player, amount: number)
+function RewardService:AddXP(player: Player, amount: number, progressAmount: number?, reason: string?)
     local stats = self.PlayerStats[player]
     if not stats then
         return
     end
 
-    stats.XP = stats.XP + math.floor(amount)
+    local delta = math.floor(amount or 0)
+    if delta <= 0 then
+        return
+    end
+
+    stats.XP = stats.XP + delta
     self:PushStats(player)
+
+    local progressXP = progressAmount
+    if typeof(progressXP) ~= "number" then
+        progressXP = delta
+    else
+        progressXP = math.floor(progressXP)
+    end
+
+    local progressService = self.PlayerProgressService
+    if not progressService then
+        local ok, service = pcall(function()
+            return Knit.GetService("PlayerProgressService")
+        end)
+        if ok then
+            progressService = service
+            self.PlayerProgressService = service
+        end
+    end
+    if progressService and progressXP > 0 then
+        progressService:AddXP(player, progressXP, reason)
+    end
 end
 
 function RewardService:RecordKill(player: Player)
@@ -162,12 +188,8 @@ end
 
 function RewardService:FinalizeMatch(reason: string)
     for player, stats in pairs(self.PlayerStats) do
-        stats.XP = stats.XP + Config.Rewards.ResultXPBonus
+        self:AddXP(player, Config.Rewards.ResultXPBonus, Config.Rewards.ResultXPBonus, "Result")
         self.ResultReasons[player] = reason
-        self:PushStats(player)
-        if self.PlayerProgressService then
-            self.PlayerProgressService:AddXP(player, Config.Rewards.ResultXPBonus, "Result")
-        end
         if self.DataStore then
             pcall(function()
                 self.DataStore:SetAsync("player_" .. player.UserId, {

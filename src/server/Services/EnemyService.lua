@@ -69,6 +69,8 @@ function EnemyService:KnitInit()
     self.PortalIndex = 0
     self.Random = Random.new()
     self:EnsureCollisionGroups()
+    self.FrozenEnemyHumanoids = {} :: {[Humanoid]: {WalkSpeed: number, AutoRotate: boolean, JumpValue: number, UseJumpPower: boolean}}
+    self.FrozenEnemyRoots = {} :: {[BasePart]: {Anchored: boolean}}
 end
 
 function EnemyService:EnsureCollisionGroups()
@@ -144,6 +146,99 @@ function EnemyService:KnitStart()
     end
 end
 
+function EnemyService:_setEnemyFrozen(enemyData, enabled: boolean)
+    if not enemyData then
+        return
+    end
+
+    local model = enemyData.Model
+    local humanoid = enemyData.Humanoid
+    local root = model and (model:FindFirstChild("HumanoidRootPart") or model.PrimaryPart)
+
+    if humanoid then
+        local record = self.FrozenEnemyHumanoids[humanoid]
+        if enabled then
+            if not record then
+                record = {
+                    WalkSpeed = humanoid.WalkSpeed,
+                    AutoRotate = humanoid.AutoRotate,
+                    UseJumpPower = humanoid.UseJumpPower,
+                    JumpValue = humanoid.UseJumpPower and humanoid.JumpPower or humanoid.JumpHeight,
+                }
+                self.FrozenEnemyHumanoids[humanoid] = record
+                humanoid.WalkSpeed = 0
+                if humanoid.UseJumpPower then
+                    humanoid.JumpPower = 0
+                else
+                    humanoid.JumpHeight = 0
+                end
+                humanoid.AutoRotate = false
+                humanoid:ChangeState(Enum.HumanoidStateType.Physics)
+            end
+        else
+            if record then
+                if humanoid.Parent then
+                    humanoid.WalkSpeed = record.WalkSpeed
+                    if humanoid.UseJumpPower then
+                        humanoid.JumpPower = record.JumpValue
+                    else
+                        humanoid.JumpHeight = record.JumpValue
+                    end
+                    humanoid.AutoRotate = record.AutoRotate
+                end
+                self.FrozenEnemyHumanoids[humanoid] = nil
+            end
+        end
+    end
+
+    if root and root:IsA("BasePart") then
+        local rootRecord = self.FrozenEnemyRoots[root]
+        if enabled then
+            if not rootRecord then
+                self.FrozenEnemyRoots[root] = {Anchored = root.Anchored}
+                root.Anchored = true
+                root.AssemblyLinearVelocity = Vector3.zero
+                root.AssemblyAngularVelocity = Vector3.zero
+            end
+        else
+            if rootRecord then
+                if root.Parent then
+                    root.Anchored = rootRecord.Anchored
+                end
+                self.FrozenEnemyRoots[root] = nil
+            end
+        end
+    end
+end
+
+function EnemyService:SetWorldFreeze(enabled: boolean)
+    if enabled then
+        for _, enemyData in pairs(self.Enemies) do
+            self:_setEnemyFrozen(enemyData, true)
+        end
+    else
+        for humanoid, record in pairs(self.FrozenEnemyHumanoids) do
+            if humanoid and humanoid.Parent then
+                humanoid.WalkSpeed = record.WalkSpeed
+                if humanoid.UseJumpPower then
+                    humanoid.JumpPower = record.JumpValue
+                else
+                    humanoid.JumpHeight = record.JumpValue
+                end
+                humanoid.AutoRotate = record.AutoRotate
+            end
+            self.FrozenEnemyHumanoids[humanoid] = nil
+        end
+
+        for root, record in pairs(self.FrozenEnemyRoots) do
+            if root and root.Parent then
+                root.Anchored = record.Anchored
+            end
+            self.FrozenEnemyRoots[root] = nil
+        end
+    end
+end
+
 function EnemyService:StartMatch(startTime: number?)
     self.MatchActive = true
     self.ActiveEnemies = 0
@@ -204,6 +299,8 @@ function EnemyService:StopAll()
     self.TouchCooldowns = {}
     self.ActiveEnemies = 0
     self.LastPortalUse = {}
+    self.FrozenEnemyHumanoids = {}
+    self.FrozenEnemyRoots = {}
     self.EnemyCountChanged:Fire(self.ActiveEnemies)
 end
 
@@ -217,7 +314,8 @@ function EnemyService:OnHeartbeat()
     end
 
     if self.PlayerProgressService and self.PlayerProgressService:IsWorldFrozen() then
-        -- TODO: Pause other enemy subsystems (AI steering, projectiles) during world freeze.
+        -- Enemy movement updates are paused while the world is frozen.
+        -- TODO: Extend this to pause other subsystems such as projectiles.
         return
     end
 
@@ -657,6 +755,10 @@ function EnemyService:SpawnEnemy(spawnCFrame: CFrame, stats)
         end)
     end
 
+    if self.PlayerProgressService and self.PlayerProgressService:IsWorldFrozen() then
+        self:_setEnemyFrozen(data, true)
+    end
+
     Net:FireAll("EnemySpawned", model)
 
     task.spawn(function()
@@ -674,6 +776,15 @@ function EnemyService:RunEnemyBehavior(enemyData)
     local refresh = math.max(0.05, Config.Enemy.PathRefresh)
 
     while self.MatchActive and humanoid.Health > 0 and model.Parent do
+        if self.PlayerProgressService and self.PlayerProgressService:IsWorldFrozen() then
+            repeat
+                task.wait(0.05)
+                if not self.MatchActive or humanoid.Health <= 0 or not model.Parent then
+                    return
+                end
+            until not self.PlayerProgressService:IsWorldFrozen()
+        end
+
         local targetRoot = self:GetClosestTarget(model)
         local root = model.PrimaryPart
 
@@ -789,6 +900,15 @@ function EnemyService:OnEnemyDied(enemyData)
         return
     end
 
+    local humanoid = enemyData.Humanoid
+    if humanoid then
+        self.FrozenEnemyHumanoids[humanoid] = nil
+    end
+    local root = model and (model:FindFirstChild("HumanoidRootPart") or model.PrimaryPart)
+    if root then
+        self.FrozenEnemyRoots[root] = nil
+    end
+
     self.Enemies[model] = nil
     self.TouchCooldowns[model] = nil
     self.ActiveEnemies = math.max(0, self.ActiveEnemies - 1)
@@ -800,13 +920,10 @@ function EnemyService:OnEnemyDied(enemyData)
     if killer then
         self.RewardService:RecordKill(killer)
         self.RewardService:AddGold(killer, enemyData.Stats.RewardGold)
-        self.RewardService:AddXP(killer, Config.Rewards.KillXP)
         local leveling = Config.Leveling
         local xpConfig = leveling and leveling.XP
         local killXP = xpConfig and xpConfig.Kill or Config.Rewards.KillXP
-        if self.PlayerProgressService then
-            self.PlayerProgressService:AddXP(killer, killXP, "Kill")
-        end
+        self.RewardService:AddXP(killer, Config.Rewards.KillXP, killXP, "Kill")
     end
 
     model:Destroy()
