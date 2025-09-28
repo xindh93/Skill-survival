@@ -18,6 +18,7 @@ local GameStateService = Knit.CreateService({
 function GameStateService:KnitInit()
     self.State = "Idle"
     self.MatchStartTime = 0
+    self.MatchStartWorldTime = 0
     self.RestartSignal = Knit.Util.Signal.new()
     self.ResultReason = "Unknown"
     self.BossSpawned = false
@@ -31,6 +32,7 @@ function GameStateService:KnitStart()
     self.RewardService = Knit.GetService("RewardService")
     self.MapService = Knit.GetService("MapService")
     self.BossService = Knit.GetService("BossService")
+    self.PlayerProgressService = Knit.GetService("PlayerProgressService")
 
     if self.EnemyService then
         self.PlayerCollisionGroup = self.EnemyService:GetPlayerCollisionGroup()
@@ -282,7 +284,10 @@ end
 function GameStateService:RunSession()
     self.State = "Active"
     self.ResultReason = "Unknown"
-    self.MatchStartTime = time()
+    local serverNow = time()
+    self.MatchStartTime = serverNow
+    local worldNow = self:GetWorldTime()
+    self.MatchStartWorldTime = worldNow
     self.BossSpawned = false
     self.EnrageTriggered = false
     self.AwardedMilestones = {}
@@ -305,8 +310,8 @@ function GameStateService:RunSession()
     local nextHudUpdate = 0
 
     while self.State == "Active" do
-        local now = time()
-        local elapsed = math.max(0, now - self.MatchStartTime)
+        local loopWorldNow = self:GetWorldTime()
+        local elapsed = self:GetElapsedWorldTime(loopWorldNow)
 
         for _, threshold in ipairs(milestoneTimes) do
             if elapsed >= threshold and not self.AwardedMilestones[threshold] then
@@ -327,9 +332,9 @@ function GameStateService:RunSession()
             break
         end
 
-        if now >= nextHudUpdate then
+        if loopWorldNow >= nextHudUpdate then
             Net:FireAll("HUD", self:GetHUDPayload(elapsed))
-            nextHudUpdate = now + 1
+            nextHudUpdate = loopWorldNow + 1
         end
 
         task.wait(0.1)
@@ -339,7 +344,9 @@ function GameStateService:RunSession()
 end
 
 function GameStateService:GetHUDPayload(elapsed: number?)
-    elapsed = elapsed or math.max(0, time() - (self.MatchStartTime or time()))
+    if typeof(elapsed) ~= "number" then
+        elapsed = self:GetElapsedWorldTime()
+    end
     return {
         State = self.State,
         RemainingEnemies = self.EnemyService and self.EnemyService:GetRemainingEnemies() or 0,
@@ -354,7 +361,9 @@ function GameStateService:GetTimeRemaining(elapsed: number?)
         return -1
     end
 
-    elapsed = elapsed or (time() - self.MatchStartTime)
+    if typeof(elapsed) ~= "number" then
+        elapsed = self:GetElapsedWorldTime()
+    end
     return math.max(0, Config.Session.TimeLimit - (elapsed or 0))
 end
 
@@ -367,7 +376,9 @@ function GameStateService:CheckForSessionEnd(elapsed: number?)
     end
 
     if not Config.Session.Infinite then
-        elapsed = elapsed or (time() - self.MatchStartTime)
+        if typeof(elapsed) ~= "number" then
+            elapsed = self:GetElapsedWorldTime()
+        end
         if elapsed >= Config.Session.TimeLimit then
             self.ResultReason = "Time limit"
             self.State = "Ended"
@@ -395,6 +406,8 @@ function GameStateService:FinalizeSession(reason: string)
         reason = "Session Complete"
     end
 
+    local finalElapsed = self:GetElapsedWorldTime()
+
     self.ResultReason = reason
     self.State = "Results"
     self.EnemyService:StopAll()
@@ -406,16 +419,41 @@ function GameStateService:FinalizeSession(reason: string)
     Net:FireAll("HUD", {
         State = self.State,
         RemainingEnemies = 0,
-        TimeRemaining = 0,
-        Elapsed = math.max(0, time() - (self.MatchStartTime or time())),
+        TimeRemaining = self:GetTimeRemaining(finalElapsed),
+        Elapsed = finalElapsed,
         Countdown = 0,
     })
 
     for _, player in ipairs(Players:GetPlayers()) do
         local summary = self.RewardService:GetSummary(player)
-        summary.TimeSurvived = math.floor(time() - self.MatchStartTime)
+        summary.TimeSurvived = math.floor(finalElapsed)
         Net:FireClient(player, "Result", summary)
     end
+
+    self.MatchStartTime = 0
+    self.MatchStartWorldTime = 0
+end
+
+function GameStateService:GetWorldTime(): number
+    local service = self.PlayerProgressService
+    if service and typeof(service.GetWorldTime) == "function" then
+        local ok, result = pcall(function()
+            return service:GetWorldTime()
+        end)
+        if ok and typeof(result) == "number" then
+            return result
+        end
+    end
+    return time()
+end
+
+function GameStateService:GetElapsedWorldTime(worldNow: number?)
+    local start = self.MatchStartWorldTime
+    if typeof(start) ~= "number" or start <= 0 then
+        return 0
+    end
+    worldNow = worldNow or self:GetWorldTime()
+    return math.max(0, worldNow - start)
 end
 
 function GameStateService:TeleportToLobby(player: Player)
