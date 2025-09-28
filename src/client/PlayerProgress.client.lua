@@ -73,6 +73,23 @@ local function markHUDReady()
     end
 end
 
+local function initControllers()
+    uiController = Knit.GetController("UIController")
+    local hud = Knit.GetController("HUDController")
+    if hud and typeof(hud.OnInterfaceReady) == "function" then
+        hud:OnInterfaceReady(function()
+            hudReady = true
+        end)
+    else
+        hudReady = true
+    end
+end
+
+task.spawn(function()
+    Knit.OnStart():await()
+    initControllers()
+end)
+
 local levelUpGui = PLAYER_GUI:WaitForChild("LevelUpModal", 5)
 if not levelUpGui then
     levelUpGui = Instance.new("ScreenGui")
@@ -221,7 +238,9 @@ local activeChoices = nil
 local overlayTween: Tween? = nil
 local freezeBlockBound = false
 
+
 pushHUDUpdate = function()
+local function pushHUDUpdate()
     if not uiController or not hudReady then
         return
     end
