@@ -81,6 +81,111 @@ if not levelUpGui then
     levelUpGui.IgnoreGuiInset = true
     levelUpGui.DisplayOrder = 100
     levelUpGui.Enabled = false
+
+    local fallbackOverlay = Instance.new("Frame")
+    fallbackOverlay.Name = "FreezeOverlay"
+    fallbackOverlay.BackgroundColor3 = Color3.new(0, 0, 0)
+    fallbackOverlay.BackgroundTransparency = 1
+    fallbackOverlay.Size = UDim2.fromScale(1, 1)
+    fallbackOverlay.ZIndex = 10
+    fallbackOverlay.Parent = levelUpGui
+
+    local fallbackConfirmBlocker = Instance.new("TextButton")
+    fallbackConfirmBlocker.Name = "ConfirmBlocker"
+    fallbackConfirmBlocker.BackgroundTransparency = 1
+    fallbackConfirmBlocker.AutoButtonColor = false
+    fallbackConfirmBlocker.Text = ""
+    fallbackConfirmBlocker.Size = UDim2.fromScale(1, 1)
+    fallbackConfirmBlocker.ZIndex = 15
+    fallbackConfirmBlocker.Modal = true
+    fallbackConfirmBlocker.Parent = levelUpGui
+
+    local fallbackRoot = Instance.new("Frame")
+    fallbackRoot.Name = "Root"
+    fallbackRoot.AnchorPoint = Vector2.new(0.5, 0.5)
+    fallbackRoot.Position = UDim2.fromScale(0.5, 0.5)
+    fallbackRoot.Size = UDim2.new(0.6, 0, 0.5, 0)
+    fallbackRoot.BackgroundTransparency = 0.2
+    fallbackRoot.BackgroundColor3 = Color3.fromRGB(24, 24, 24)
+    fallbackRoot.BorderSizePixel = 0
+    fallbackRoot.ZIndex = 20
+    fallbackRoot.Parent = levelUpGui
+
+    local fallbackTitle = Instance.new("TextLabel")
+    fallbackTitle.Name = "Title"
+    fallbackTitle.BackgroundTransparency = 1
+    fallbackTitle.Size = UDim2.new(1, -20, 0, 40)
+    fallbackTitle.Position = UDim2.new(0, 10, 0, 10)
+    fallbackTitle.Font = Enum.Font.GothamBold
+    fallbackTitle.TextSize = 28
+    fallbackTitle.TextColor3 = Color3.new(1, 1, 1)
+    fallbackTitle.Text = "Choose 1 Upgrade"
+    fallbackTitle.ZIndex = 21
+    fallbackTitle.Parent = fallbackRoot
+
+    local fallbackOptions = Instance.new("Frame")
+    fallbackOptions.Name = "Options"
+    fallbackOptions.BackgroundTransparency = 1
+    fallbackOptions.Size = UDim2.new(1, -20, 1, -70)
+    fallbackOptions.Position = UDim2.new(0, 10, 0, 60)
+    fallbackOptions.ZIndex = 21
+    fallbackOptions.Parent = fallbackRoot
+
+    local listLayout = Instance.new("UIListLayout")
+    listLayout.FillDirection = Enum.FillDirection.Horizontal
+    listLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    listLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+    listLayout.Padding = UDim.new(0, 10)
+    listLayout.Parent = fallbackOptions
+
+    for index = 1, 3 do
+        local optionButton = Instance.new("TextButton")
+        optionButton.Name = string.format("Option%d", index)
+        optionButton.AutoButtonColor = true
+        optionButton.Size = UDim2.new(0, 180, 1, -10)
+        optionButton.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+        optionButton.BackgroundTransparency = 0.1
+        optionButton.BorderSizePixel = 0
+        optionButton.TextWrapped = true
+        optionButton.TextSize = 20
+        optionButton.Font = Enum.Font.Gotham
+        optionButton.TextColor3 = Color3.new(1, 1, 1)
+        optionButton.Text = "Select"
+        optionButton.ZIndex = 22
+        optionButton.Parent = fallbackOptions
+
+        local nameLabel = Instance.new("TextLabel")
+        nameLabel.Name = "Name"
+        nameLabel.BackgroundTransparency = 1
+        nameLabel.Size = UDim2.new(1, -12, 0, 30)
+        nameLabel.Position = UDim2.new(0, 6, 0, 6)
+        nameLabel.Font = Enum.Font.GothamBold
+        nameLabel.TextSize = 20
+        nameLabel.TextWrapped = true
+        nameLabel.TextColor3 = Color3.new(1, 1, 1)
+        nameLabel.Text = "Upgrade"
+        nameLabel.ZIndex = 23
+        nameLabel.Parent = optionButton
+
+        local descLabel = Instance.new("TextLabel")
+        descLabel.Name = "Desc"
+        descLabel.BackgroundTransparency = 1
+        descLabel.Size = UDim2.new(1, -12, 0, 60)
+        descLabel.Position = UDim2.new(0, 6, 0, 42)
+        descLabel.Font = Enum.Font.Gotham
+        descLabel.TextSize = 16
+        descLabel.TextWrapped = true
+        descLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
+        descLabel.Text = "Description"
+        descLabel.ZIndex = 23
+        descLabel.Parent = optionButton
+
+        local choiceId = Instance.new("StringValue")
+        choiceId.Name = "ChoiceId"
+        choiceId.Value = ""
+        choiceId.Parent = optionButton
+    end
+
     levelUpGui.Parent = PLAYER_GUI
 end
 

@@ -6,7 +6,8 @@
     "ServerScriptService": { "Server": { "$path": "src/server" } },
     "StarterGui": {
       "SkillSurvivalHUD": { "$path": "src/startergui/SkillSurvivalHUD" },
-      "Sidebar": { "$path": "src/startergui/Sidebar" }
+      "Sidebar": { "$path": "src/startergui/Sidebar" },
+      "LevelUpModal": { "$path": "src/startergui/LevelUpModal" }
     },
     "StarterPlayer": {
       "StarterPlayerScripts": { "Client": { "$path": "src/client" } }
