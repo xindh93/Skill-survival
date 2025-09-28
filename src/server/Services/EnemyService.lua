@@ -920,13 +920,10 @@ function EnemyService:OnEnemyDied(enemyData)
     if killer then
         self.RewardService:RecordKill(killer)
         self.RewardService:AddGold(killer, enemyData.Stats.RewardGold)
-        self.RewardService:AddXP(killer, Config.Rewards.KillXP)
         local leveling = Config.Leveling
         local xpConfig = leveling and leveling.XP
         local killXP = xpConfig and xpConfig.Kill or Config.Rewards.KillXP
-        if self.PlayerProgressService then
-            self.PlayerProgressService:AddXP(killer, killXP, "Kill")
-        end
+        self.RewardService:AddXP(killer, Config.Rewards.KillXP, killXP, "Kill")
     end
 
     model:Destroy()
