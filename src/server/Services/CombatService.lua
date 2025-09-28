@@ -167,7 +167,10 @@ function CombatService:HandleSkill(player: Player, skillId: string, payload)
 end
 
 function CombatService:ExecuteAOEBlast(player: Player, root: BasePart, levelInfo, payload)
-    local radius = levelInfo.Radius or 10
+    local baseRadius = levelInfo.Radius or 10
+    local radiusScale = 1.3
+    -- Match the fully expanded VFX ring which scales up to ~130% of the base radius.
+    local radius = baseRadius * radiusScale
     local damage = levelInfo.Damage or 40
     local origin = root.Position
 
@@ -200,7 +203,7 @@ function CombatService:ExecuteAOEBlast(player: Player, root: BasePart, levelInfo
     Net:FireAll("Combat", {
         Type = "AOE",
         Position = origin,
-        Radius = radius,
+        Radius = baseRadius,
     })
 end
 

@@ -305,13 +305,13 @@
                 "BackgroundTransparency": 1,
                 "Font": "GothamBold",
                 "Text": "",
-                "TextSize": 20,
+                "TextSize": 48,
                 "TextColor3": { "Color3": [1, 1, 1] },
-                "TextStrokeTransparency": 0.6,
+                "TextStrokeTransparency": 0.35,
                 "TextXAlignment": "Center",
                 "TextYAlignment": "Center",
                 "TextTransparency": 1,
-                "Size": { "UDim2": [1, 0, 0, 40] },
+                "Size": { "UDim2": [1, 0, 0, 80] },
                 "LayoutOrder": 0
               }
             },

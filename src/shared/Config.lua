@@ -11,6 +11,7 @@ Config.Session = {
     SurgeTimes = {120, 240, 360},
     SurgeDuration = 10,
     ResultDuration = 12,
+    PrepareDuration = 5,
 }
 
 Config.Enemy = {
@@ -74,6 +75,7 @@ local levelingUI = leveling.UI
 levelingUI.LerpSpeed = levelingUI.LerpSpeed or 6
 levelingUI.ToastDuration = levelingUI.ToastDuration or 2.0
 levelingUI.FreezeFade = levelingUI.FreezeFade or 0.25
+levelingUI.SelectionTimeout = levelingUI.SelectionTimeout or 30
 
 function leveling.XPToNext(level: number): number
     level = math.max(1, math.floor(level))

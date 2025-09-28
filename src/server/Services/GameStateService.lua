@@ -25,6 +25,7 @@ function GameStateService:KnitInit()
     self.EnrageTriggered = false
     self.AwardedMilestones = {}
     self.CharacterConnections = {}
+    self.LastPrepareCountdown = 0
 end
 
 function GameStateService:KnitStart()
@@ -282,15 +283,41 @@ function GameStateService:RestartMatch(player: Player)
 end
 
 function GameStateService:RunSession()
-    self.State = "Active"
     self.ResultReason = "Unknown"
+    self.BossSpawned = false
+    self.EnrageTriggered = false
+    self.AwardedMilestones = {}
+    self.MatchStartTime = 0
+    self.MatchStartWorldTime = 0
+
+    local prepareDuration = Config.Session.PrepareDuration or 5
+    local prepareEnd = self:GetWorldTime() + math.max(0, prepareDuration)
+
+    self.State = "Prepare"
+    Net:FireAll("HUD", self:GetHUDPayload(0, prepareDuration))
+
+    local lastBroadcastCountdown = math.huge
+
+    while self.State == "Prepare" do
+        local now = self:GetWorldTime()
+        local remaining = math.max(0, prepareEnd - now)
+        self.LastPrepareCountdown = remaining
+        if lastBroadcastCountdown == math.huge or math.ceil(remaining) ~= math.ceil(lastBroadcastCountdown) or remaining <= 0 then
+            Net:FireAll("HUD", self:GetHUDPayload(0, remaining))
+            lastBroadcastCountdown = remaining
+        end
+        if remaining <= 0 then
+            break
+        end
+        task.wait(0.1)
+    end
+
+    self.State = "Active"
+    self.LastPrepareCountdown = 0
     local serverNow = time()
     self.MatchStartTime = serverNow
     local worldNow = self:GetWorldTime()
     self.MatchStartWorldTime = worldNow
-    self.BossSpawned = false
-    self.EnrageTriggered = false
-    self.AwardedMilestones = {}
 
     self.RewardService:ResetAll()
     self.EnemyService:StartMatch(self.MatchStartTime)
@@ -305,7 +332,7 @@ function GameStateService:RunSession()
     end
     table.sort(milestoneTimes)
 
-    Net:FireAll("HUD", self:GetHUDPayload(0))
+    Net:FireAll("HUD", self:GetHUDPayload(0, 0))
 
     local nextHudUpdate = 0
 
@@ -333,7 +360,7 @@ function GameStateService:RunSession()
         end
 
         if loopWorldNow >= nextHudUpdate then
-            Net:FireAll("HUD", self:GetHUDPayload(elapsed))
+            Net:FireAll("HUD", self:GetHUDPayload(elapsed, 0))
             nextHudUpdate = loopWorldNow + 1
         end
 
@@ -343,17 +370,25 @@ function GameStateService:RunSession()
     self:FinalizeSession(self.ResultReason)
 end
 
-function GameStateService:GetHUDPayload(elapsed: number?)
+function GameStateService:GetHUDPayload(elapsed: number?, countdown: number?)
     if typeof(elapsed) ~= "number" then
         elapsed = self:GetElapsedWorldTime()
     end
-    return {
+    local payload = {
         State = self.State,
         RemainingEnemies = self.EnemyService and self.EnemyService:GetRemainingEnemies() or 0,
         TimeRemaining = self:GetTimeRemaining(elapsed),
         Elapsed = elapsed,
         Countdown = 0,
     }
+
+    if typeof(countdown) == "number" then
+        payload.Countdown = math.max(0, countdown)
+    elseif self.State == "Prepare" then
+        payload.Countdown = math.max(0, self.LastPrepareCountdown or 0)
+    end
+
+    return payload
 end
 
 function GameStateService:GetTimeRemaining(elapsed: number?)

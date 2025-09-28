@@ -46,47 +46,21 @@ function EnemyBillboard:AttachBillboard(model: Model)
             return
         end
 
-        local billboard = Instance.new("BillboardGui")
-        billboard.Name = "EnemyBillboard"
-        billboard.Size = UDim2.new(0, 120, 0, 30)
-        billboard.StudsOffset = Vector3.new(0, 4, 0)
-        billboard.AlwaysOnTop = true
-        billboard.Parent = primary
-
-        local frame = Instance.new("Frame")
-        frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-        frame.BackgroundTransparency = 0.4
-        frame.Size = UDim2.fromScale(1, 1)
-        frame.Parent = billboard
-
-        local bar = Instance.new("Frame")
-        bar.Name = "HealthBar"
-        bar.BackgroundColor3 = Color3.fromRGB(88, 255, 88)
-        bar.BorderSizePixel = 0
-        bar.Size = UDim2.fromScale(1, 1)
-        bar.Parent = frame
-
-        local text = Instance.new("TextLabel")
-        text.BackgroundTransparency = 1
-        text.Size = UDim2.fromScale(1, 1)
-        text.Font = Enum.Font.GothamSemibold
-        text.TextScaled = true
-        text.TextColor3 = Color3.new(1, 1, 1)
-        text.TextStrokeTransparency = 0.6
-        text.Text = model.Name
-        text.Parent = frame
-
-        local connections = {}
-        local function update()
-            bar.Size = UDim2.fromScale(math.clamp(humanoid.Health / math.max(1, humanoid.MaxHealth), 0, 1), 1)
+        local existing = primary:FindFirstChild("EnemyBillboard")
+        if existing then
+            existing:Destroy()
         end
 
-        table.insert(connections, humanoid:GetPropertyChangedSignal("Health"):Connect(update))
-        update()
+        -- Enemy nameplates and health bars are intentionally disabled.
+        -- Retain an empty placeholder so future toggles can re-enable without
+        -- leaking connections.
+        local placeholder = Instance.new("Folder")
+        placeholder.Name = "EnemyBillboard"
+        placeholder.Parent = primary
 
         self.Billboards[model] = {
-            Billboard = billboard,
-            Connections = connections,
+            Billboard = placeholder,
+            Connections = {},
         }
     end)
 end
