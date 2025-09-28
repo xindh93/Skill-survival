@@ -90,7 +90,28 @@ task.spawn(function()
     end
 end)
 
-local levelUpGui = PLAYER_GUI:WaitForChild("LevelUpModal", 5)
+local function resolveLevelUpGui(instance: Instance?)
+    if not instance then
+        return nil
+    end
+
+    if instance:IsA("LayerCollector") then
+        return instance
+    end
+
+    if instance:IsA("Folder") or instance:IsA("Instance") then
+        return instance:FindFirstChildWhichIsA("LayerCollector")
+    end
+
+    return nil
+end
+
+local levelUpContainer = PLAYER_GUI:FindFirstChild("LevelUpModal")
+if not levelUpContainer then
+    levelUpContainer = PLAYER_GUI:WaitForChild("LevelUpModal", 5)
+end
+
+local levelUpGui = resolveLevelUpGui(levelUpContainer)
 if not levelUpGui then
     levelUpGui = Instance.new("ScreenGui")
     levelUpGui.Name = "LevelUpModal"
@@ -204,6 +225,9 @@ if not levelUpGui then
     end
 
     levelUpGui.Parent = PLAYER_GUI
+elseif levelUpContainer ~= levelUpGui and levelUpGui.Parent == levelUpContainer then
+    -- keep the resolved ScreenGui reference but ensure it has expected name
+    levelUpGui.Name = "LevelUpModal"
 end
 
 local freezeOverlay = levelUpGui:FindFirstChild("FreezeOverlay")
