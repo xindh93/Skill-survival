@@ -17,14 +17,30 @@ local MAX_LEVEL = (LEVELING.MaxLevel and math.floor(LEVELING.MaxLevel)) or 50
 local LERP_SPEED = LEVELING_UI.LerpSpeed or 6
 local FREEZE_FADE = LEVELING_UI.FreezeFade or 0.25
 
+local controllersFolder = script.Parent and script.Parent:FindFirstChild("Controllers")
+
 local function waitForController(name: string)
     while true do
-        local ok, controller = pcall(function()
-            return Knit.GetController(name)
-        end)
-        if ok and controller then
-            return controller
+        controllersFolder = controllersFolder or (script.Parent and script.Parent:FindFirstChild("Controllers"))
+
+        local getController = Knit and Knit.GetController
+        if typeof(getController) == "function" then
+            local ok, controller = pcall(getController, Knit, name)
+            if ok and controller then
+                return controller
+            end
         end
+
+        if controllersFolder then
+            local module = controllersFolder:FindFirstChild(name)
+            if module and module:IsA("ModuleScript") then
+                local ok, controller = pcall(require, module)
+                if ok and controller then
+                    return controller
+                end
+            end
+        end
+
         task.wait()
     end
 end
