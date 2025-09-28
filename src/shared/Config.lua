@@ -56,6 +56,33 @@ Config.Rewards = {
     ResultXPBonus = 100,
 }
 
+Config.Leveling = Config.Leveling or {}
+
+local leveling = Config.Leveling
+leveling.BaseXP = leveling.BaseXP or 100
+leveling.Growth = leveling.Growth or 1.25
+leveling.MaxLevel = leveling.MaxLevel or 50
+leveling.XP = leveling.XP or {
+    Kill = 12,
+    Assist = 6,
+    BossKill = 250,
+    Minute = 0,
+}
+
+leveling.UI = leveling.UI or {}
+local levelingUI = leveling.UI
+levelingUI.LerpSpeed = levelingUI.LerpSpeed or 6
+levelingUI.ToastDuration = levelingUI.ToastDuration or 2.0
+levelingUI.FreezeFade = levelingUI.FreezeFade or 0.25
+
+function leveling.XPToNext(level: number): number
+    level = math.max(1, math.floor(level))
+    local base = leveling.BaseXP or 0
+    local growth = leveling.Growth or 1
+    local value = base * (growth ^ (level - 1))
+    return math.floor(value)
+end
+
 Config.Map = {
     FloorSize = Vector3.new(220, 2, 220),
     FloorMaterial = Enum.Material.Slate,

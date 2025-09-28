@@ -21,6 +21,7 @@ function BossService:KnitInit()
 end
 
 function BossService:KnitStart()
+    self.PlayerProgressService = Knit.GetService("PlayerProgressService")
     RunService.Heartbeat:Connect(function()
         self:_onHeartbeat()
     end)
@@ -33,6 +34,11 @@ end
 
 function BossService:_onHeartbeat()
     if not self.SessionActive then
+        return
+    end
+
+    if self.PlayerProgressService and self.PlayerProgressService:IsWorldFrozen() then
+        -- TODO: Defer boss ability timers while the world is frozen.
         return
     end
 
