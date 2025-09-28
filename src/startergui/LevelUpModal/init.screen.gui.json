@@ -1,0 +1,205 @@
+{
+  "$className": "ScreenGui",
+  "$properties": {
+    "Name": "LevelUpModal",
+    "ResetOnSpawn": false,
+    "IgnoreGuiInset": true,
+    "ZIndexBehavior": "Sibling",
+    "DisplayOrder": 100,
+    "Enabled": false
+  },
+  "$children": {
+    "ConfirmBlocker": {
+      "$className": "TextButton",
+      "$properties": {
+        "Name": "ConfirmBlocker",
+        "BackgroundTransparency": 1,
+        "Size": { "UDim2": [1, 0, 1, 0] },
+        "Text": "",
+        "AutoButtonColor": false,
+        "Selectable": false,
+        "ZIndex": 1
+      }
+    },
+    "FreezeOverlay": {
+      "$className": "Frame",
+      "$properties": {
+        "Name": "FreezeOverlay",
+        "BackgroundColor3": { "Color3": [0, 0, 0] },
+        "BackgroundTransparency": 1,
+        "Size": { "UDim2": [1, 0, 1, 0] },
+        "ZIndex": 2
+      }
+    },
+    "Root": {
+      "$className": "Frame",
+      "$properties": {
+        "Name": "Root",
+        "Active": true,
+        "Modal": true,
+        "BackgroundTransparency": 1,
+        "Size": { "UDim2": [0, 520, 0, 340] },
+        "AnchorPoint": { "Vector2": [0.5, 0.5] },
+        "Position": { "UDim2": [0.5, 0, 0.5, 0] },
+        "Visible": false,
+        "ZIndex": 3
+      },
+      "$children": {
+        "UIPadding": {
+          "$className": "UIPadding",
+          "$properties": {
+            "PaddingTop": { "UDim": [0, 24] },
+            "PaddingBottom": { "UDim": [0, 24] },
+            "PaddingLeft": { "UDim": [0, 24] },
+            "PaddingRight": { "UDim": [0, 24] }
+          }
+        },
+        "UIListLayout": {
+          "$className": "UIListLayout",
+          "$properties": {
+            "FillDirection": "Vertical",
+            "HorizontalAlignment": "Center",
+            "VerticalAlignment": "Center",
+            "Padding": { "UDim": [0, 20] }
+          }
+        },
+        "Title": {
+          "$className": "TextLabel",
+          "$properties": {
+            "Name": "Title",
+            "BackgroundTransparency": 1,
+            "Text": "Choose 1 Upgrade",
+            "Font": "GothamBold",
+            "TextSize": 32,
+            "TextColor3": { "Color3": [1, 1, 1] },
+            "TextStrokeTransparency": 0.6,
+            "Size": { "UDim2": [1, -48, 0, 48] },
+            "ZIndex": 3
+          }
+        },
+        "Options": {
+          "$className": "Frame",
+          "$properties": {
+            "Name": "Options",
+            "BackgroundTransparency": 1,
+            "Size": { "UDim2": [1, 0, 0, 220] },
+            "ZIndex": 3
+          },
+          "$children": {
+            "UIListLayout": {
+              "$className": "UIListLayout",
+              "$properties": {
+                "FillDirection": "Horizontal",
+                "HorizontalAlignment": "Center",
+                "VerticalAlignment": "Center",
+                "Padding": { "UDim": [0, 16] }
+              }
+            },
+            "Option1": {
+              "$className": "TextButton",
+              "$properties": {
+                "Name": "Option1",
+                "BackgroundColor3": { "Color3": [0.113725, 0.14902, 0.2] },
+                "BackgroundTransparency": 0.2,
+                "BorderSizePixel": 0,
+                "AutoButtonColor": true,
+                "Text": "",
+                "Size": { "UDim2": [0, 150, 1, 0] },
+                "ZIndex": 3
+              },
+              "$children": {
+                "UICorner": {
+                  "$className": "UICorner",
+                  "$properties": { "CornerRadius": { "UDim": [0, 12] } }
+                },
+                "UIStroke": {
+                  "$className": "UIStroke",
+                  "$properties": {
+                    "Color": { "Color3": [0.345098, 0.713725, 1] },
+                    "Thickness": 2,
+                    "Transparency": 0.2
+                  }
+                },
+                "UIPadding": {
+                  "$className": "UIPadding",
+                  "$properties": {
+                    "PaddingTop": { "UDim": [0, 12] },
+                    "PaddingBottom": { "UDim": [0, 12] },
+                    "PaddingLeft": { "UDim": [0, 12] },
+                    "PaddingRight": { "UDim": [0, 12] }
+                  }
+                },
+                "UIListLayout": {
+                  "$className": "UIListLayout",
+                  "$properties": {
+                    "FillDirection": "Vertical",
+                    "HorizontalAlignment": "Left",
+                    "VerticalAlignment": "Top",
+                    "Padding": { "UDim": [0, 8] }
+                  }
+                },
+                "Icon": {
+                  "$className": "ImageLabel",
+                  "$properties": {
+                    "Name": "Icon",
+                    "BackgroundTransparency": 1,
+                    "ImageTransparency": 0.1,
+                    "ImageColor3": { "Color3": [0.784314, 0.94902, 1] },
+                    "Size": { "UDim2": [0, 48, 0, 48] },
+                    "ZIndex": 3
+                  }
+                },
+                "Name": {
+                  "$className": "TextLabel",
+                  "$properties": {
+                    "Name": "Name",
+                    "BackgroundTransparency": 1,
+                    "Font": "GothamBold",
+                    "Text": "Option",
+                    "TextSize": 20,
+                    "TextColor3": { "Color3": [1, 1, 1] },
+                    "TextXAlignment": "Left",
+                    "TextWrapped": true,
+                    "Size": { "UDim2": [1, 0, 0, 24] },
+                    "ZIndex": 3
+                  }
+                },
+                "Desc": {
+                  "$className": "TextLabel",
+                  "$properties": {
+                    "Name": "Desc",
+                    "BackgroundTransparency": 1,
+                    "Font": "Gotham",
+                    "Text": "Description",
+                    "TextSize": 16,
+                    "TextColor3": { "Color3": [0.85098, 0.909804, 1] },
+                    "TextXAlignment": "Left",
+                    "TextWrapped": true,
+                    "Size": { "UDim2": [1, 0, 1, -84] },
+                    "ZIndex": 3
+                  }
+                },
+                "ChoiceId": {
+                  "$className": "StringValue",
+                  "$properties": { "Name": "ChoiceId", "Value": "" }
+                }
+              }
+            },
+            "Option2": {
+              "$ref": "Option1",
+              "$properties": {
+                "Name": "Option2"
+              }
+            },
+            "Option3": {
+              "$ref": "Option1",
+              "$properties": {
+                "Name": "Option3"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

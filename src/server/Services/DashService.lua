@@ -73,6 +73,7 @@ function DashService:KnitStart()
 
 
     self.EnemyService = Knit.GetService("EnemyService")
+    self.PlayerProgressService = Knit.GetService("PlayerProgressService")
 
     Net:GetEvent("DashRequest").OnServerEvent:Connect(function(player, direction)
         self:HandleDashRequest(player, direction)
@@ -302,6 +303,11 @@ function DashService:ScheduleIFrameClear(character: Model, duration: number)
 end
 
 function DashService:UpdateDashes()
+    if self.PlayerProgressService and self.PlayerProgressService:IsWorldFrozen() then
+        -- TODO: Pause dash progression entirely while world freeze is active.
+        return
+    end
+
     if next(self.ActiveDashes) == nil then
         return
     end
