@@ -203,7 +203,7 @@ function CombatService:ExecuteAOEBlast(player: Player, root: BasePart, levelInfo
     Net:FireAll("Combat", {
         Type = "AOE",
         Position = origin,
-        Radius = baseRadius,
+        Radius = radius,
     })
 end
 
