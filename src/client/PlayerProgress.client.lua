@@ -73,21 +73,21 @@ local function markHUDReady()
     end
 end
 
-local function initControllers()
-    uiController = Knit.GetController("UIController")
-    local hud = Knit.GetController("HUDController")
-    if hud and typeof(hud.OnInterfaceReady) == "function" then
-        hud:OnInterfaceReady(function()
-            hudReady = true
+task.spawn(function()
+    uiController = waitForController("UIController")
+
+    local hudController = waitForController("HUDController")
+    if hudController and typeof(hudController.OnInterfaceReady) == "function" then
+        hudController:OnInterfaceReady(function()
+            markHUDReady()
         end)
     else
-        hudReady = true
+        markHUDReady()
     end
-end
 
-task.spawn(function()
-    Knit.OnStart():await()
-    initControllers()
+    if hudController and hudController.Screen then
+        markHUDReady()
+    end
 end)
 
 local levelUpGui = PLAYER_GUI:WaitForChild("LevelUpModal", 5)
@@ -259,23 +259,6 @@ local function pushHUDUpdate()
         XPProgress = progress,
     })
 end
-
-task.spawn(function()
-    uiController = waitForController("UIController")
-    local hudController = waitForController("HUDController")
-
-    if hudController and typeof(hudController.OnInterfaceReady) == "function" then
-        hudController:OnInterfaceReady(function()
-            markHUDReady()
-        end)
-    end
-
-    if hudController and hudController.Screen then
-        markHUDReady()
-    elseif not hudController then
-        markHUDReady()
-    end
-end)
 
 local function setTargetFromXP(xp: number, xpToNext: number)
     xpToNext = math.max(0, xpToNext or 0)
