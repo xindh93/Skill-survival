@@ -239,7 +239,6 @@ local overlayTween: Tween? = nil
 local freezeBlockBound = false
 
 
-pushHUDUpdate = function()
 local function pushHUDUpdate()
     if not uiController or not hudReady then
         return
