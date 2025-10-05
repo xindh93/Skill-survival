@@ -482,6 +482,7 @@ function PlayerProgressService:BroadcastLevelUpStatus()
     local committed = 0
     local minRemaining = nil
     local now = time()
+    local playerCount = #Players:GetPlayers()
 
     for _, profile in pairs(self.Profiles) do
         local active = profile and profile.activeLevelUp
@@ -502,6 +503,7 @@ function PlayerProgressService:BroadcastLevelUpStatus()
         Total = total,
         Committed = committed,
         Remaining = minRemaining,
+        PlayerCount = playerCount,
     })
 end
 

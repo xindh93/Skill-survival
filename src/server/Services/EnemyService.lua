@@ -895,7 +895,7 @@ function EnemyService:OnEnemyDied(enemyData)
         local leveling = Config.Leveling
         local xpConfig = leveling and leveling.XP
         local killXP = xpConfig and xpConfig.Kill or Config.Rewards.KillXP
-        self.RewardService:AddXP(killer, Config.Rewards.KillXP, killXP, "Kill")
+        self.RewardService:AddPartyXP(Config.Rewards.KillXP, killXP, "Kill")
     end
 
     model:Destroy()
