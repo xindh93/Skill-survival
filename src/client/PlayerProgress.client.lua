@@ -45,6 +45,20 @@ local function waitForController(name: string)
     end
 end
 
+local function waitForControllerState(name: string)
+    local controller = waitForController(name)
+    while controller do
+        local state = controller.State
+        if typeof(state) == "table" then
+            return controller
+        end
+
+        task.wait()
+    end
+
+    return nil
+end
+
 local inputController: any = nil
 
 task.spawn(function()
@@ -80,7 +94,7 @@ local function markHUDReady()
 end
 
 task.spawn(function()
-    uiController = waitForController("UIController")
+    uiController = waitForControllerState("UIController")
 
     local hudController = waitForController("HUDController")
     if hudController and typeof(hudController.OnInterfaceReady) == "function" then
@@ -320,15 +334,20 @@ local function pushHUDUpdate()
         return
     end
 
+    local controllerState = uiController.State
+    if typeof(controllerState) ~= "table" then
+        return
+    end
+
     local progress = {
         Ratio = math.clamp(xpState.currentRatio, 0, 1),
         Current = xpState.xp,
         Required = xpState.xpToNext,
     }
 
-    uiController.State.Level = xpState.level
-    uiController.State.XP = xpState.xp
-    uiController.State.XPProgress = progress
+    controllerState.Level = xpState.level
+    controllerState.XP = xpState.xp
+    controllerState.XPProgress = progress
     uiController:WithHUD("UpdateXP", {
         Level = xpState.level,
         XP = xpState.xp,
