@@ -45,6 +45,12 @@ local function waitForController(name: string)
     end
 end
 
+local inputController: any = nil
+
+task.spawn(function()
+    inputController = waitForController("InputController")
+end)
+
 local function computeXPToNext(level: number): number
     if level >= MAX_LEVEL then
         return 0
@@ -347,7 +353,19 @@ local function applyLevel(level: number, xp: number, xpToNext: number)
     setTargetFromXP(xp, xpToNext)
 end
 
+local function resetMovementState()
+    if not inputController then
+        inputController = waitForController("InputController")
+    end
+
+    if inputController and typeof(inputController.ResetMovementState) == "function" then
+        inputController:ResetMovementState()
+    end
+end
+
 local function setInputBlocked(enabled: boolean)
+    resetMovementState()
+
     if enabled and not freezeBlockBound then
         local function sink()
             return Enum.ContextActionResult.Sink
