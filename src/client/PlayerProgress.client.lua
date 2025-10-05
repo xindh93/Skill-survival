@@ -286,6 +286,7 @@ if statusLabel then
     statusLabel.TextTransparency = 0
     statusLabel.TextStrokeTransparency = 1
     statusLabel.ZIndex = math.max(statusLabel.ZIndex or 0, (rootFrame and rootFrame.ZIndex or 0) + 5)
+
 end
 
 local optionButtons = {}
@@ -344,7 +345,11 @@ local function refreshStatusLabel(force)
         return
     end
 
+
     local playerCount = math.max(0, math.floor((statusState.playerCount or 0) + 0.5))
+
+    local playerCount = math.max(activeCount, math.floor((statusState.playerCount or 0) + 0.5))
+
     if playerCount <= 0 then
         playerCount = activeCount
     end
@@ -695,11 +700,15 @@ levelUpStatusEvent.OnClientEvent:Connect(function(payload)
     statusState.total = math.max(0, tonumber(payload.Total) or 0)
     statusState.committed = math.max(0, tonumber(payload.Committed) or 0)
     local playerCount = tonumber(payload.PlayerCount) or 0
+
     if playerCount > 0 then
         statusState.playerCount = math.max(0, math.floor(playerCount + 0.5))
     else
         statusState.playerCount = math.max(statusState.total, 0)
     end
+
+    statusState.playerCount = math.max(statusState.total, math.max(0, playerCount))
+
     if statusState.total > 0 and typeof(payload.Remaining) == "number" then
         statusState.remaining = math.max(0, payload.Remaining)
     else
