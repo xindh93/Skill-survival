@@ -256,6 +256,27 @@ local confirmBlocker = levelUpGui:FindFirstChild("ConfirmBlocker")
 local optionsFrame = rootFrame and rootFrame:FindFirstChild("Options")
 local statusLabel = rootFrame and rootFrame:FindFirstChild("StatusLabel")
 
+if not statusLabel and rootFrame then
+    statusLabel = Instance.new("TextLabel")
+    statusLabel.Name = "StatusLabel"
+    statusLabel.BackgroundTransparency = 1
+    statusLabel.Size = UDim2.new(1, -20, 0, 40)
+    statusLabel.Position = UDim2.new(0, 10, 1, -50)
+    statusLabel.ZIndex = 23
+    statusLabel.Text = ""
+    statusLabel.Visible = false
+    statusLabel.TextWrapped = false
+    statusLabel.TextXAlignment = Enum.TextXAlignment.Center
+    statusLabel.TextYAlignment = Enum.TextYAlignment.Center
+    statusLabel.Parent = rootFrame
+end
+
+if statusLabel then
+    statusLabel.TextScaled = false
+    statusLabel.TextSize = math.max(28, statusLabel.TextSize or 0)
+    statusLabel.Font = Enum.Font.GothamBold
+end
+
 local optionButtons = {}
 if optionsFrame then
     for _, child in ipairs(optionsFrame:GetChildren()) do
@@ -286,6 +307,7 @@ local statusState = {
     total = 0,
     committed = 0,
     remaining = 0,
+    playerCount = 0,
     lastText = nil,
 }
 
@@ -302,8 +324,8 @@ local function refreshStatusLabel(force)
         return
     end
 
-    local total = math.max(0, math.floor(statusState.total + 0.5))
-    if total <= 0 then
+    local activeCount = math.max(0, math.floor(statusState.total + 0.5))
+    if activeCount <= 0 then
         if statusLabel.Visible then
             statusLabel.Visible = false
         end
@@ -311,13 +333,18 @@ local function refreshStatusLabel(force)
         return
     end
 
+    local playerCount = math.max(activeCount, math.floor((statusState.playerCount or 0) + 0.5))
+    if playerCount <= 0 then
+        playerCount = activeCount
+    end
+
     local committed = math.max(0, math.floor(statusState.committed + 0.5))
-    committed = math.clamp(committed, 0, total)
-    local ratioText = string.format("%d/%d", committed, total)
-    local text = "Ready: " .. ratioText
+    committed = math.clamp(committed, 0, playerCount)
+    local ratioText = string.format("%d/%d", committed, playerCount)
+    local text = ratioText
     local remaining = statusState.remaining or 0
     if remaining > 0 then
-        text = string.format("Ready: %s (%ds)", ratioText, math.ceil(remaining))
+        text = string.format("%s (%ds)", ratioText, math.ceil(remaining))
     end
 
     if force or text ~= statusState.lastText then
@@ -656,6 +683,8 @@ levelUpStatusEvent.OnClientEvent:Connect(function(payload)
 
     statusState.total = math.max(0, tonumber(payload.Total) or 0)
     statusState.committed = math.max(0, tonumber(payload.Committed) or 0)
+    local playerCount = tonumber(payload.PlayerCount) or 0
+    statusState.playerCount = math.max(statusState.total, math.max(0, playerCount))
     if statusState.total > 0 and typeof(payload.Remaining) == "number" then
         statusState.remaining = math.max(0, payload.Remaining)
     else

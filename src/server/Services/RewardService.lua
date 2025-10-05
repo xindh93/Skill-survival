@@ -96,7 +96,7 @@ function RewardService:AddGold(player: Player, amount: number)
     self:PushStats(player)
 end
 
-function RewardService:AddXP(player: Player, amount: number, progressAmount: number?, reason: string?)
+function RewardService:_grantXP(player: Player, amount: number, progressAmount: number?, reason: string?)
     local stats = self.PlayerStats[player]
     if not stats then
         return
@@ -129,6 +129,21 @@ function RewardService:AddXP(player: Player, amount: number, progressAmount: num
     end
     if progressService and progressXP > 0 then
         progressService:AddXP(player, progressXP, reason)
+    end
+end
+
+function RewardService:AddXP(player: Player, amount: number, progressAmount: number?, reason: string?)
+    self:_grantXP(player, amount, progressAmount, reason)
+end
+
+function RewardService:AddPartyXP(amount: number, progressAmount: number?, reason: string?)
+    local delta = math.floor(amount or 0)
+    if delta <= 0 then
+        return
+    end
+
+    for player in pairs(self.PlayerStats) do
+        self:_grantXP(player, delta, progressAmount, reason)
     end
 end
 
@@ -187,8 +202,9 @@ function RewardService:GrantMilestoneRewards(threshold: number)
 end
 
 function RewardService:FinalizeMatch(reason: string)
+    self:AddPartyXP(Config.Rewards.ResultXPBonus, Config.Rewards.ResultXPBonus, "Result")
+
     for player, stats in pairs(self.PlayerStats) do
-        self:AddXP(player, Config.Rewards.ResultXPBonus, Config.Rewards.ResultXPBonus, "Result")
         self.ResultReasons[player] = reason
         if self.DataStore then
             pcall(function()
