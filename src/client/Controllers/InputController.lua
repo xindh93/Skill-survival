@@ -61,6 +61,19 @@ function InputController:KnitStart()
     end)
 end
 
+function InputController:ResetMovementState()
+    self.ActiveMoveKeys = {}
+    self.MoveVector = Vector3.zero
+    self.LastMoveVector = Vector3.zero
+
+    local player = Players.LocalPlayer
+    local character = player and player.Character
+    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        humanoid:Move(Vector3.zero, true)
+    end
+end
+
 function InputController:BindMovement()
     local function updateMoveVector()
         local move = Vector3.zero
