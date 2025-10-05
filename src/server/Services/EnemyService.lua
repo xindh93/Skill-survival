@@ -185,6 +185,7 @@ function EnemyService:_setEnemyFrozen(enemyData, enabled: boolean)
                         humanoid.JumpHeight = record.JumpValue
                     end
                     humanoid.AutoRotate = record.AutoRotate
+                    humanoid:ChangeState(Enum.HumanoidStateType.Running)
                 end
                 self.FrozenEnemyHumanoids[humanoid] = nil
             end
@@ -226,6 +227,7 @@ function EnemyService:SetWorldFreeze(enabled: boolean)
                     humanoid.JumpHeight = record.JumpValue
                 end
                 humanoid.AutoRotate = record.AutoRotate
+                humanoid:ChangeState(Enum.HumanoidStateType.Running)
             end
             self.FrozenEnemyHumanoids[humanoid] = nil
         end
