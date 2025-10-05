@@ -256,6 +256,27 @@ local confirmBlocker = levelUpGui:FindFirstChild("ConfirmBlocker")
 local optionsFrame = rootFrame and rootFrame:FindFirstChild("Options")
 local statusLabel = rootFrame and rootFrame:FindFirstChild("StatusLabel")
 
+if not statusLabel and rootFrame then
+    statusLabel = Instance.new("TextLabel")
+    statusLabel.Name = "StatusLabel"
+    statusLabel.BackgroundTransparency = 1
+    statusLabel.Size = UDim2.new(1, -20, 0, 40)
+    statusLabel.Position = UDim2.new(0, 10, 1, -50)
+    statusLabel.ZIndex = 23
+    statusLabel.Text = ""
+    statusLabel.Visible = false
+    statusLabel.TextWrapped = false
+    statusLabel.TextXAlignment = Enum.TextXAlignment.Center
+    statusLabel.TextYAlignment = Enum.TextYAlignment.Center
+    statusLabel.Parent = rootFrame
+end
+
+if statusLabel then
+    statusLabel.TextScaled = false
+    statusLabel.TextSize = math.max(28, statusLabel.TextSize or 0)
+    statusLabel.Font = Enum.Font.GothamBold
+end
+
 local optionButtons = {}
 if optionsFrame then
     for _, child in ipairs(optionsFrame:GetChildren()) do
