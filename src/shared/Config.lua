@@ -31,9 +31,9 @@ Config.Enemy = {
     BossPhaseMaxActive = 60,
     PathRefresh = 0.25,
     Spawn = {
-        MinSpawnDistance = 40,
-        PortalCooldown = 1.0,
-        Separation = 6,
+        PlayerRadiusMin = 10,
+        PlayerRadiusMax = 15,
+        SpawnHeight = 6,
         MaxSpawnAttempts = 8,
     },
 }
