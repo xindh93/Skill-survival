@@ -2,7 +2,6 @@ local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local PhysicsService = game:GetService("PhysicsService")
-local CollectionService = game:GetService("CollectionService")
 local RunService = game:GetService("RunService")
 
 local Knit = require(ReplicatedStorage.Shared.Knit)
@@ -65,7 +64,6 @@ function EnemyService:KnitInit()
     self.ActiveCap = Config.Enemy.MaxActive or 80
     self.MaxActiveCap = Config.Enemy.MaxActive or 80
     self.BossPhaseCap = Config.Enemy.BossPhaseMaxActive or self.ActiveCap
-    self.LastPortalUse = {} :: {[Instance]: number}
     self.PortalIndex = 0
     self.Random = Random.new()
     self:EnsureCollisionGroups()
@@ -134,7 +132,6 @@ end
 
 function EnemyService:KnitStart()
     self.RewardService = Knit.GetService("RewardService")
-    self.MapService = Knit.GetService("MapService")
     self.CombatService = Knit.GetService("CombatService")
     self.PlayerProgressService = Knit.GetService("PlayerProgressService")
 
@@ -271,7 +268,6 @@ function EnemyService:StartMatch(startTime: number?)
     self.SurgeActive = false
     self.CurrentSurgeIndex = 1
     self.ActiveCap = self.MaxActiveCap
-    self.LastPortalUse = {}
     self.PortalIndex = 0
     self.EnemyFolder:ClearAllChildren()
     self.EnemyCountChanged:Fire(self.ActiveEnemies)
@@ -300,7 +296,6 @@ function EnemyService:StopAll()
     self.Enemies = {}
     self.TouchCooldowns = {}
     self.ActiveEnemies = 0
-    self.LastPortalUse = {}
     self.FrozenEnemyHumanoids = {}
     self.FrozenEnemyRoots = {}
     self.EnemyCountChanged:Fire(self.ActiveEnemies)
@@ -406,33 +401,12 @@ end
 function EnemyService:GetSpawnPortals(): {BasePart}
     local portals = {}
 
-    for _, instance in ipairs(CollectionService:GetTagged("SpawnPortal")) do
-        local part = self:ResolvePortalPart(instance)
-        if part and part.Parent then
-            table.insert(portals, part)
-        end
-    end
-
-    if #portals == 0 and self.MapService then
-        for _, part in ipairs(self.MapService:GetEnemySpawns()) do
-            if part and part.Parent and part:IsA("BasePart") then
-                table.insert(portals, part)
-            end
-        end
-    end
-
-    if #portals == 0 then
-        return portals
-    end
-
-    local lookup = {}
-    for _, portal in ipairs(portals) do
-        lookup[portal] = true
-    end
-
-    for portal in pairs(self.LastPortalUse) do
-        if not lookup[portal] or not portal.Parent then
-            self.LastPortalUse[portal] = nil
+    for _, player in ipairs(Players:GetPlayers()) do
+        local character = player.Character
+        local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+        local root = character and character:FindFirstChild("HumanoidRootPart")
+        if humanoid and humanoid.Health > 0 and root then
+            table.insert(portals, root)
         end
     end
 
@@ -440,19 +414,11 @@ function EnemyService:GetSpawnPortals(): {BasePart}
 end
 
 function EnemyService:ResolvePortalPart(instance: Instance?): BasePart?
-    if not instance then
-        return nil
-    end
-
-    if instance:IsA("BasePart") then
+    if instance and instance:IsA("BasePart") then
         return instance
     end
 
-    if instance:IsA("Model") then
-        return instance:FindFirstChildWhichIsA("BasePart", true)
-    end
-
-    return instance:FindFirstChildWhichIsA("BasePart", true)
+    return nil
 end
 
 function EnemyService:GetWorldTime(): number
@@ -545,7 +511,13 @@ end
 function EnemyService:LogSpawn(portal: Instance?, reason: string, attempt: number, nearest: number?, isElite: boolean?, source: string?)
     local portalName = "unknown"
     if portal and portal.Parent then
-        portalName = portal:GetFullName()
+        local character = portal.Parent
+        local player = Players:GetPlayerFromCharacter(character)
+        if player then
+            portalName = string.format("player:%s", player.Name)
+        else
+            portalName = portal:GetFullName()
+        end
     end
 
     local message = string.format("[EnemyService] Spawn %s @Portal=%s, attempts=%d", tostring(reason), portalName, attempt or 0)
@@ -576,14 +548,11 @@ function EnemyService:AttemptSpawn(portals: {BasePart}, stats, elapsed: number, 
             break
         end
 
-        local spawnCFrame, reason, nearest = self:ValidatePortal(portal, spawnConfig)
+        local spawnCFrame, nearest = self:ValidatePortal(portal, spawnConfig)
         if spawnCFrame then
-            self.LastPortalUse[portal] = self:GetWorldTime()
             self:SpawnEnemy(spawnCFrame, stats)
             self:LogSpawn(portal, "OK", attempt, nearest, stats.IsElite, source)
             return true
-        else
-            self:LogSpawn(portal, reason or "Failed", attempt, nearest, stats.IsElite, source)
         end
     end
 
@@ -625,43 +594,44 @@ function EnemyService:SpawnEnemies(count: number, elapsed: number, source: strin
 end
 
 function EnemyService:ValidatePortal(portal: BasePart, spawnConfig)
-    local now = self:GetWorldTime()
-    local cooldown = spawnConfig.PortalCooldown or 0
-    local lastUse = self.LastPortalUse[portal]
-    if cooldown > 0 and lastUse and (now - lastUse) < cooldown then
-        return nil, "Cooldown"
-    end
-
     local part = self:ResolvePortalPart(portal)
     if not part or not part.Parent then
-        return nil, "Invalid"
+        return nil, nil
     end
 
-    local separation = spawnConfig.Separation or 0
-    local offset = Vector3.zero
-    if separation > 0 then
-        local radius = math.sqrt(self.Random:NextNumber()) * separation
-        local angle = self.Random:NextNumber() * math.pi * 2
-        offset = Vector3.new(math.cos(angle) * radius, 0, math.sin(angle) * radius)
+    local minRadius = spawnConfig.PlayerRadiusMin or 10
+    local maxRadius = spawnConfig.PlayerRadiusMax or 15
+    if maxRadius < minRadius then
+        maxRadius = minRadius
     end
 
-    local origin = part.Position + offset + Vector3.new(0, 6, 0)
+    local radius
+    if maxRadius > minRadius then
+        radius = minRadius + self.Random:NextNumber() * (maxRadius - minRadius)
+    else
+        radius = minRadius
+    end
+
+    local angle = self.Random:NextNumber() * math.pi * 2
+    local offset = Vector3.new(math.cos(angle) * radius, 0, math.sin(angle) * radius)
+
+    local height = spawnConfig.SpawnHeight or 6
+    local origin = part.Position + offset + Vector3.new(0, height, 0)
     local params = RaycastParams.new()
     params.FilterType = Enum.RaycastFilterType.Exclude
     params.FilterDescendantsInstances = {self.EnemyFolder}
-    local result = Workspace:Raycast(origin, Vector3.new(0, -20, 0), params)
-    if not result then
-        return nil, "NoGround"
+
+    local result = Workspace:Raycast(origin, Vector3.new(0, -(height + 20), 0), params)
+    local spawnPosition
+    if result then
+        spawnPosition = result.Position + Vector3.new(0, 3, 0)
+    else
+        spawnPosition = part.Position + offset
     end
 
-    local spawnPosition = result.Position + Vector3.new(0, 3, 0)
-    local minDistance = spawnConfig.MinSpawnDistance or 0
     local nearest = self:GetNearestPlayerDistance(spawnPosition)
-    if minDistance > 0 and nearest and nearest < minDistance then
-        return nil, "TooClose", nearest
-    end
 
-    return CFrame.new(spawnPosition), "OK", nearest
+    return CFrame.new(spawnPosition), nearest
 end
 
 function EnemyService:CreateEnemyModel(stats)
